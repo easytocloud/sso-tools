@@ -1,9 +1,6 @@
 # .github/workflows/release.yml
 # Start Homebrew Releaser when a new tag is created
-on:
-  push:
-    tags:
-      - "*"
+on: push
 
 jobs:
   homebrew-releaser:

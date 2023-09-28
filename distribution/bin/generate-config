@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-touch ~/.aws/config 
+mkdir -p ~/.aws && touch ~/.aws/config 
 
 if
   grep '\[sso-session sso\]' ~/.aws/config  > /dev/null

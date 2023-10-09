@@ -60,7 +60,7 @@ jobs:
             bin.install "distribution/bin/ssostart"
             bin.install "distribution/bin/cclist"
             bin.install "distribution/bin/ccclone"
-            bin.install "distribution/bin/generate-config"
+            bin.install "distribution/bin/generate-sso-config"
 
           # Custom test command for your formula so you can run `brew test`.
           # Optional - string.

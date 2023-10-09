@@ -1,0 +1,83 @@
+#! /usr/bin/env bash
+
+mkdir -p ~/.aws && touch ~/.aws/config 
+
+if
+  grep '\[sso-session sso\]' ~/.aws/config  > /dev/null
+then
+  echo "SSO session configured"
+else
+  if  
+    grep -q 'sso_start_url' ~/.aws/config
+  then
+    echo "SSO configuration in place"
+    echo ".. attempt to use sso_start_url"
+    grep 'sso_start_url' ~/.aws/config | tr -d ' ' | cut -f2 -d'=' | sort -u > /tmp/sso.uniq
+    u=$(cat /tmp/sso.uniq | wc -l | tr -d ' ')
+    if (( $u == 1 ))
+    then
+      echo ".. using $(cat /tmp/sso.uniq) for sso_start_url"
+      SSO_START=$(cat /tmp/sso.uniq)
+    else
+      echo ".. too many different start urls."
+    fi
+  fi
+  if test -z "${SSO_START}"
+  then
+    echo -n "Please enter your start URL : "
+    read SSO_START
+  fi
+  echo "Configuring SSO session"
+  echo "" >> ~/.aws/config
+  echo "[sso-session sso]" >> ~/.aws/config
+  echo "sso_region = eu-west-1" >> ~/.aws/config
+  echo "sso_start_url = ${SSO_START}" >> ~/.aws/config
+  echo "sso_registration_scopes = sso:account:access" >> ~/.aws/config
+  echo "" >> ~/.aws/config
+  echo
+fi
+
+if 
+  aws sso login --sso-session sso
+then
+  echo "Started SSO session"
+  echo "Patience please while ~/.aws/config is completed - this might take a few minutes"
+else
+  echo "SSO login failed"
+  exit 1
+fi
+
+# Find a session token after
+
+TOKENFILE=$(ls -tr ~/.aws/sso/cache | tail -1 )
+#echo ${TOKENFILE}
+test -s "${TOKENFILE}" && echo "No cached tokenfile" && exit 1
+TOKEN=$(cat ~/.aws/sso/cache/${TOKENFILE} | jq -r .accessToken )
+test -s "${TOKENFILE}" && echo "No access token" && exit 1
+#echo $TOKEN
+
+exec 1> /tmp/foo.$$
+
+cat ~/.aws/config | sed '/^# >>>/,/^# >>>/d'    
+
+echo "# >>> BEGIN GENERATED CONFIG <<<"
+aws sso list-accounts --access-token "${TOKEN}" | jq -r '.accountList[] | (.accountId, .accountName)' | sed 'N;s/\n/ /' | while read id name
+do
+  echo -n "." >&2
+  # echo $name
+  name=$(echo $name | tr ' ' '_')
+  aws sso list-account-roles --access-token "${TOKEN}" --account-id ${id} | jq -r '.roleList[].roleName' | while read rolename
+  do
+      rolename=$(echo $rolename | tr ' ' '_')
+      echo
+      echo "[profile ${rolename}@${name}]"
+      echo "sso_session = sso"
+      echo "sso_account_id = ${id}"
+      echo "sso_role_name = ${rolename}"
+  done
+done
+echo "# >>> END GENERATED CONFIG <<<"
+echo "" >&2
+
+cp /tmp/foo.$$ ~/.aws/config
+rm -f ~/.aws/config.needed

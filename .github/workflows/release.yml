@@ -59,6 +59,7 @@ jobs:
           install: |
             bin.install "distribution/bin/ssostart"
             bin.install "distribution/bin/cclist"
+            bin.install "distribution/bin/ccinit"
             bin.install "distribution/bin/ccclone"
             bin.install "distribution/bin/generate-sso-config"
 

@@ -1,3 +1,0 @@
-#! /usr/bin/env bash
-
-aws codecommit list-repositories --query 'repositories[].repositoryName'

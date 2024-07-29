@@ -1,3 +1,10 @@
+## [0.2.2](https://github.com/easytocloud/sso-tools/compare/v0.2.1...v0.2.2) (2024-07-29)
+
+
+### Bug Fixes
+
+* added comment in ssostart ([7c4c576](https://github.com/easytocloud/sso-tools/commit/7c4c576de480bbd83b6b0f81d2d59cc6b2732500))
+
 ## [0.2.1](https://github.com/easytocloud/sso-tools/compare/v0.2.0...v0.2.1) (2024-07-29)
 
 

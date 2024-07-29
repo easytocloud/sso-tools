@@ -55,7 +55,7 @@ jobs:
           # Optional - multiline string.
           # make sure aws-utils is installed
           depends_on: |
-             "easytocloud/aws-utils"
+             "easytocloud/tap/aws-utils"
           
           # Custom install command for your formula.
           # Required - string.

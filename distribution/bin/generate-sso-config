@@ -58,7 +58,7 @@ test -s "${TOKENFILE}" && echo "No access token" && exit 1
 
 exec 1> /tmp/foo.$$
 
-cat ~/.aws/config | sed '/^# >>>/,/^# >>>/d'    
+cat ~/.aws/config | sed '/^# >>> BEGIN/,/^# >>> END/d'    
 
 echo "# >>> BEGIN GENERATED CONFIG <<<"
 aws sso list-accounts --access-token "${TOKEN}" | jq -r '.accountList[] | (.accountId, .accountName)' | sed 'N;s/\n/ /' | while read id name

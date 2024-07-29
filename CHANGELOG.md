@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/easytocloud/sso-tools/compare/v0.2.0...v0.3.0) (2024-07-29)
+
+
+### Features
+
+* more robust replacement of generated config ([238841d](https://github.com/easytocloud/sso-tools/commit/238841dcb1e681649170a7cba4e85a4f615fcba4))
+
 # [0.2.0](https://github.com/easytocloud/sso-tools/compare/v0.1.6...v0.2.0) (2024-07-29)
 
 

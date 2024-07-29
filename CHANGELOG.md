@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/easytocloud/sso-tools/compare/v0.2.0...v0.2.1) (2024-07-29)
+
+
+### Bug Fixes
+
+* updated checkout version ([92fa392](https://github.com/easytocloud/sso-tools/commit/92fa392b9505417a4ba284adb814a7fb23d4e0ce))
+
 # [0.2.0](https://github.com/easytocloud/sso-tools/compare/v0.1.9...v0.2.0) (2024-07-29)
 
 

@@ -2,7 +2,8 @@
 # Start Homebrew Releaser when a new tag is created
 on:
   push:
-    - main
+    branches:
+      - main
 
 jobs:
   homebrew-releaser:

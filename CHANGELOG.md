@@ -1,3 +1,11 @@
+## [0.3.1](https://github.com/easytocloud/sso-tools/compare/v0.3.0...v0.3.1) (2024-07-31)
+
+
+### Bug Fixes
+
+* changed release on push to main only ([88232e6](https://github.com/easytocloud/sso-tools/commit/88232e6d22cbb3358e4ce56a8890bb0badf97a08))
+* changed release on push to main only ([fb8531a](https://github.com/easytocloud/sso-tools/commit/fb8531a54ea0b24fd862280a343ec1b624c5a5c3))
+
 # [0.3.0](https://github.com/easytocloud/sso-tools/compare/v0.2.0...v0.3.0) (2024-07-29)
 
 

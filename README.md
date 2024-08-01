@@ -1,5 +1,8 @@
+![release workflow](https://github.com/easytocloud/sso-tools/actions/workflows/release.yml/badge.svg)
+
 # sso-tools
-sso tools for use in AWS ec2 instances
+
+AWS sso tools for use in AWS ec2 instances
 
 # Install / Configure
 

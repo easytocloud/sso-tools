@@ -1,3 +1,10 @@
+## [0.3.2](https://github.com/easytocloud/sso-tools/compare/v0.3.1...v0.3.2) (2024-08-01)
+
+
+### Bug Fixes
+
+* added .DS_Store to .gitignore ([a05d914](https://github.com/easytocloud/sso-tools/commit/a05d914331dff09843e97649623f1b17c3af7736))
+
 ## [0.3.1](https://github.com/easytocloud/sso-tools/compare/v0.3.0...v0.3.1) (2024-07-31)
 
 

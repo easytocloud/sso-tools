@@ -1,3 +1,10 @@
+## [0.3.3](https://github.com/easytocloud/sso-tools/compare/v0.3.2...v0.3.3) (2024-08-01)
+
+
+### Bug Fixes
+
+* added release badge to README ([ea621aa](https://github.com/easytocloud/sso-tools/commit/ea621aa8d9226a5427be1b5cf35dd9396bf00c6e))
+
 ## [0.3.2](https://github.com/easytocloud/sso-tools/compare/v0.3.1...v0.3.2) (2024-08-01)
 
 

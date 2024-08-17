@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/easytocloud/sso-tools/compare/v0.4.0...v0.4.1) (2024-08-17)
+
+
+### Bug Fixes
+
+* improved stability in "empty" start situation ([d5cd817](https://github.com/easytocloud/sso-tools/commit/d5cd8179dbb5c3f4a7dda78724920a2b69bba805))
+
 # [0.4.0](https://github.com/easytocloud/sso-tools/compare/v0.3.3...v0.4.0) (2024-08-17)
 
 

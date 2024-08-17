@@ -1,83 +1,259 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
 
-mkdir -p ~/.aws && touch ~/.aws/config 
+set -euo pipefail
 
-if
-  grep '\[sso-session sso\]' ~/.aws/config  > /dev/null
-then
-  echo "SSO session configured"
-else
-  if  
-    grep -q 'sso_start_url' ~/.aws/config
-  then
-    echo "SSO configuration in place"
-    echo ".. attempt to use sso_start_url"
-    grep 'sso_start_url' ~/.aws/config | tr -d ' ' | cut -f2 -d'=' | sort -u > /tmp/sso.uniq
-    u=$(cat /tmp/sso.uniq | wc -l | tr -d ' ')
-    if (( $u == 1 ))
-    then
-      echo ".. using $(cat /tmp/sso.uniq) for sso_start_url"
-      SSO_START=$(cat /tmp/sso.uniq)
-    else
-      echo ".. too many different start urls."
+# Configuration
+AWS_CONFIG_FILE="${AWS_CONFIG_FILE:-${HOME}/.aws/config}"
+SSO_CACHE_DIR="${HOME}/.aws/sso/cache"
+DEFAULT_SSO_REGION="eu-west-1"
+SSO_UNIFIED_DIR="${HOME}/sso-unified"
+
+# if ${AWS_CONFIG_FILE} is a symlink, set it to the target
+if [[ -L ${AWS_CONFIG_FILE} ]]; then
+    AWS_CONFIG_FILE=$(readlink -f ${AWS_CONFIG_FILE})
+fi
+
+# Function to log messages
+log() {
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" >&2
+}
+
+# Function to ensure AWS config file exists
+ensure_aws_config() {
+    local AWS_CONFIG_DIR=$(dirname "$AWS_CONFIG_FILE")
+    test -d ${AWS_CONFIG_DIR} || mkdir -p "$(dirname "$AWS_CONFIG_FILE")"
+    test -f ${AWS_CONFIG_FILE} || touch "$AWS_CONFIG_FILE"
+}
+
+# Function to check if SSO session is configured
+is_sso_session_configured() {
+    grep -q '\[sso-session sso\]' "$AWS_CONFIG_FILE"
+}
+
+# Function to get SSO start URL
+get_sso_start_url() {
+    local sso_start_url
+
+    if grep -q 'sso_start_url' "$AWS_CONFIG_FILE"; then
+        log "SSO configuration in place"
+        log "Attempting to use existing sso_start_url"
+        sso_start_url=$(grep 'sso_start_url' "$AWS_CONFIG_FILE" | tr -d ' ' | cut -f2 -d'=' | sort -u)
+        
+        if [[ $(echo "$sso_start_url" | wc -l) -eq 1 ]]; then
+            log "Using $sso_start_url for sso_start_url"
+            echo "$sso_start_url"
+            return
+        else
+            log "Too many different start URLs found"
+        fi
     fi
-  fi
-  if test -z "${SSO_START}"
-  then
-    echo -n "Please enter your start URL : "
-    read SSO_START
-  fi
-  echo "Configuring SSO session"
-  echo "" >> ~/.aws/config
-  echo "[sso-session sso]" >> ~/.aws/config
-  echo "sso_region = eu-west-1" >> ~/.aws/config
-  echo "sso_start_url = ${SSO_START}" >> ~/.aws/config
-  echo "sso_registration_scopes = sso:account:access" >> ~/.aws/config
-  echo "" >> ~/.aws/config
-  echo
-fi
 
-if 
-  aws sso login --sso-session sso
-then
-  echo "Started SSO session"
-  echo "Patience please while ~/.aws/config is completed - this might take a few minutes"
-else
-  echo "SSO login failed"
-  exit 1
-fi
+    while true; do
+        read -rp "Please enter your SSO start URL: " sso_start_url
+        if [[ $sso_start_url =~ ^https?:// ]]; then
+            echo "$sso_start_url"
+            return
+        else
+            log "Invalid URL format. Please enter a valid URL starting with http:// or https://"
+        fi
+    done
+}
 
-# Find a session token after
+# Function to extract SSO name from URL
+extract_sso_name() {
+    local sso_url=$1
+    echo "$sso_url" | sed -n 's/^https:\/\/\([^.]*\)\.awsapps\.com\/.*$/\1/p'
+}
 
-TOKENFILE=$(ls -tr ~/.aws/sso/cache | tail -1 )
-#echo ${TOKENFILE}
-test -s "${TOKENFILE}" && echo "No cached tokenfile" && exit 1
-TOKEN=$(cat ~/.aws/sso/cache/${TOKENFILE} | jq -r .accessToken )
-test -s "${TOKENFILE}" && echo "No access token" && exit 1
-#echo $TOKEN
+# Function to configure SSO session
+configure_sso_session() {
+    local sso_start_url=$1
+    local sso_region
 
-exec 1> /tmp/foo.$$
+    sso_region=${SSO_REGION:-$DEFAULT_SSO_REGION}
 
-cat ~/.aws/config | sed '/^# >>> BEGIN/,/^# >>> END/d'    
+    log "Configuring SSO session"
+    {
+        echo ""
+        echo "[sso-session sso]"
+        echo "sso_region = $sso_region"
+        echo "sso_start_url = $sso_start_url"
+        echo "sso_registration_scopes = sso:account:access"
+        echo ""
+    } >> "$AWS_CONFIG_FILE"
+}
 
-echo "# >>> BEGIN GENERATED CONFIG <<<"
-aws sso list-accounts --access-token "${TOKEN}" | jq -r '.accountList[] | (.accountId, .accountName)' | sed 'N;s/\n/ /' | while read id name
-do
-  echo -n "." >&2
-  # echo $name
-  name=$(echo $name | tr ' ' '_')
-  aws sso list-account-roles --access-token "${TOKEN}" --account-id ${id} | jq -r '.roleList[].roleName' | while read rolename
-  do
-      rolename=$(echo $rolename | tr ' ' '_')
-      echo
-      echo "[profile ${rolename}@${name}]"
-      echo "sso_session = sso"
-      echo "sso_account_id = ${id}"
-      echo "sso_role_name = ${rolename}"
-  done
-done
-echo "# >>> END GENERATED CONFIG <<<"
-echo "" >&2
+# Function to perform SSO login
+sso_login() {
+    if aws sso login --sso-session sso; then
+        log "Started SSO session"
+        log "Patience please while $AWS_CONFIG_FILE is completed - this might take a few minutes"
+    else
+        log "SSO login failed"
+        exit 1
+    fi
+}
 
-cp /tmp/foo.$$ ~/.aws/config
-rm -f ~/.aws/config.needed
+# Function to get access token
+get_access_token() {
+    local token_file
+    token_file=$(ls -tr "$SSO_CACHE_DIR" | tail -1)
+    
+    if [[ ! -s "$SSO_CACHE_DIR/$token_file" ]]; then
+        log "No cached token file"
+        exit 1
+    fi
+
+    local token
+    token=$(jq -r .accessToken < "$SSO_CACHE_DIR/$token_file")
+
+    if [[ -z "$token" ]]; then
+        log "No access token"
+        exit 1
+    fi
+
+    echo "$token"
+}
+
+# Function to create .envrc file and run cclist if needed
+create_envrc_file_and_run_cclist() {
+    local sso_name=$1
+    local account_name=$2
+    local profile_name=$3
+    local create_repos_md=$4
+    local account_dir="${SSO_UNIFIED_DIR}/${sso_name}/${account_name}"
+    
+    mkdir -p "${account_dir}"
+    
+    cat << EOF > "${account_dir}/.envrc"
+export AWS_CONFIG_FILE=${AWS_CONFIG_FILE:-${HOME}/.aws/config}
+export AWS_SHARED_CREDENTIALS_FILE=${AWS_SHARED_CREDENTIALS_FILE:-${HOME}/.aws/credentials}
+export AWS_PROFILE=${profile_name}
+export AWS_DEFAULT_REGION=${DEFAULT_SSO_REGION}
+EOF
+
+    log "Created .envrc file for ${sso_name}/${account_name}"
+
+    if $create_repos_md; then
+        log "Running direnv allow and cclist for ${sso_name}/${account_name}"
+        (
+            cd "${account_dir}" || exit
+            direnv allow
+            source .envrc
+            cclist --create-repos-md
+        )
+    fi
+}
+
+# Function to generate AWS config
+generate_aws_config() {
+    local token=$1
+    local developer_role_name=$2
+    local create_directories=$3
+    local sso_name=$4
+    local create_repos_md=$5
+    local temp_file
+    temp_file=$(mktemp)
+
+    # Copy existing config without generated part
+    sed '/^# >>> BEGIN/,/^# >>> END/d' "$AWS_CONFIG_FILE" > "$temp_file"
+
+    {
+        echo "# >>> BEGIN GENERATED CONFIG <<<"
+        aws sso list-accounts --access-token "$token" | 
+        jq -r '.accountList[] | (.accountId, .accountName)' | 
+        sed 'N;s/\n/ /' | 
+        while read -r id name; do
+            echo -n "." >&2
+            name=$(echo "$name" | tr ' ' '_')
+            local first_role=true
+            aws sso list-account-roles --access-token "$token" --account-id "$id" | 
+            jq -r '.roleList[].roleName' | 
+            while read -r rolename; do
+                rolename=$(echo "$rolename" | tr ' ' '_')
+                profile_name="${rolename}@${name}"
+                echo
+                echo "[profile ${profile_name}]"
+                echo "sso_session = sso"
+                echo "sso_account_id = ${id}"
+                echo "sso_role_name = ${rolename}"
+                
+                # Create .envrc file for the first role or the specified developer role if --create-directories is set
+                if $create_directories && { $first_role && [ -z "$developer_role_name" ]; } || [ "$rolename" = "$developer_role_name" ]; then
+                    create_envrc_file_and_run_cclist "$sso_name" "$name" "$profile_name" "$create_repos_md"
+                    first_role=false
+                fi
+            done
+        done
+        echo "# >>> END GENERATED CONFIG <<<"
+        echo ""
+    } >> "$temp_file"
+
+    mv "$temp_file" "$AWS_CONFIG_FILE"
+}
+
+# Function to parse command-line arguments
+parse_arguments() {
+    CREATE_DIRECTORIES=false
+    CREATE_REPOS_MD=false
+    DEVELOPER_ROLE_NAME=""
+    SSO_NAME=""
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --developer-role-name)
+                DEVELOPER_ROLE_NAME="$2"
+                shift 2
+                ;;
+            --create-directories)
+                CREATE_DIRECTORIES=true
+                shift
+                ;;
+            --sso-name)
+                SSO_NAME="$2"
+                shift 2
+                ;;
+            --create-repos-md)
+                CREATE_REPOS_MD=true
+                shift
+                ;;
+            *)
+                log "Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
+}
+
+# Main execution
+main() {
+    parse_arguments "$@"
+
+    ensure_aws_config
+
+    if ! is_sso_session_configured; then
+        sso_start_url=$(get_sso_start_url)
+        configure_sso_session "$sso_start_url"
+    else
+        sso_start_url=$(grep 'sso_start_url' "$AWS_CONFIG_FILE" | tr -d ' ' | cut -f2 -d'=' | tail -1)
+    fi
+
+    if [ -z "$SSO_NAME" ]; then
+        SSO_NAME=$(extract_sso_name "$sso_start_url")
+    fi
+
+    sso_login
+    token=$(get_access_token)
+    generate_aws_config "$token" "$DEVELOPER_ROLE_NAME" "$CREATE_DIRECTORIES" "$SSO_NAME" "$CREATE_REPOS_MD"
+
+    log "AWS configuration completed successfully"
+    if $CREATE_DIRECTORIES; then
+        log ".envrc files creation completed successfully under ${SSO_UNIFIED_DIR}/${SSO_NAME}"
+        if $CREATE_REPOS_MD; then
+            log "cclist --create-repos-md executed for each account directory"
+        fi
+    else
+        log "Directory and .envrc file creation skipped (use --create-directories to enable)"
+    fi
+}
+
+main "$@"

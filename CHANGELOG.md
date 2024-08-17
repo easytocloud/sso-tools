@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/easytocloud/sso-tools/compare/v0.3.3...v0.4.0) (2024-08-17)
+
+
+### Features
+
+* added several command line options. see README for more info ([1f729a5](https://github.com/easytocloud/sso-tools/commit/1f729a5a885b2ad51d652f646ddd8d9b78d42597))
+
 ## [0.3.3](https://github.com/easytocloud/sso-tools/compare/v0.3.2...v0.3.3) (2024-08-01)
 
 

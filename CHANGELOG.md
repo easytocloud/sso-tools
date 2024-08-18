@@ -1,3 +1,11 @@
+## [0.5.1](https://github.com/easytocloud/sso-tools/compare/v0.5.0...v0.5.1) (2024-08-18)
+
+
+### Bug Fixes
+
+* added direnv to dependencies and updated README ([c4af94b](https://github.com/easytocloud/sso-tools/commit/c4af94b1de62d5b457134a93def82fd57c85c409))
+* improved cloud9 support (no sso-name) ([f2db1a8](https://github.com/easytocloud/sso-tools/commit/f2db1a81c83dac9af96ccb5fdf5864d8cc801963))
+
 # [0.5.0](https://github.com/easytocloud/sso-tools/compare/v0.4.1...v0.5.0) (2024-08-18)
 
 

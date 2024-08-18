@@ -9,6 +9,14 @@ DEFAULT_SSO_REGION="eu-west-1"
 SSO_UNIFIED_DIR="${HOME}/sso-unified"
 
 export AWS_DEFAULT_REGION=${DEFAULT_SSO_REGION}
+
+# if username is ec2-user and a directory environment exists in the users home directory, use that as the SSO_UNIFIED_DIR
+if [[ $(whoami) == "ec2-user" ]]; then
+    if [[ -d "/home/ec2-user/environment" ]]; then
+        SSO_UNIFIED_DIR="/home/ec2-user/environment"
+    fi
+fi
+
 # if ${AWS_CONFIG_FILE} is a symlink, set it to the target
 if [[ -L ${AWS_CONFIG_FILE} ]]; then
     AWS_CONFIG_FILE=$(readlink -f ${AWS_CONFIG_FILE})
@@ -123,7 +131,17 @@ create_envrc_file_and_run_cclist() {
     local profile_name=$3
     local create_repos_md=$4
     local temp_file=$5
-    local account_dir="${SSO_UNIFIED_DIR}/${sso_name}/${account_name}"
+    local account_id=$6
+    local use_ou_structure=$7
+    local account_dir
+
+    if $use_ou_structure; then
+        local ou_path
+        ou_path=$(find_ou_path "$account_id")
+        account_dir="${SSO_UNIFIED_DIR}/${sso_name}${ou_path}/${account_name}"
+    else
+        account_dir="${SSO_UNIFIED_DIR}/${sso_name}/${account_name}"
+    fi
     
     mkdir -p "${account_dir}"
     CONFIG_DIR=${AWS_CONFIG_FILE%/*}
@@ -139,10 +157,10 @@ export AWS_PROFILE=${profile_name}
 export AWS_DEFAULT_REGION=${DEFAULT_SSO_REGION}
 EOF
 
-    log "Created .envrc file for ${sso_name}/${account_name}"
+    log "Created .envrc file for ${account_dir}"
 
     if $create_repos_md; then
-        log "Running direnv allow and cclist for ${sso_name}/${account_name}"
+        log "Running direnv allow and cclist for ${account_dir}"
         (
             cd "${account_dir}" || exit
             direnv allow
@@ -160,6 +178,7 @@ generate_aws_config() {
     local create_directories=$3
     local sso_name=$4
     local create_repos_md=$5
+    local use_ou_structure=$6
     local temp_file
     temp_file=$(mktemp)
 
@@ -190,7 +209,7 @@ generate_aws_config() {
                 
                 # Create .envrc file for the first role or the specified developer role if --create-directories is set
                 if $create_directories && { $first_role && [ -z "$developer_role_name" ]; } || [ "$rolename" = "$developer_role_name" ]; then
-                    create_envrc_file_and_run_cclist "$sso_name" "$name" "$profile_name" "$create_repos_md" "$temp_file"
+                    create_envrc_file_and_run_cclist "$sso_name" "$name" "$profile_name" "$create_repos_md" "$temp_file" "$id" "$use_ou_structure"
                     first_role=false
                 fi
             done
@@ -202,12 +221,61 @@ generate_aws_config() {
     mv "$temp_file" "$AWS_CONFIG_FILE"
 }
 
+find_ou_path() {
+    local account_id="$1"
+    local path=""
+    local current_id="$account_id"
+    local is_account=true
+
+    while true; do
+        if $is_account; then
+            # Get the parent of the account
+            parent_info=$(aws organizations list-parents --child-id "$current_id" --output json 2>/dev/null)
+        else
+            # Get the parent of the OU
+            parent_info=$(aws organizations list-parents --child-id "$current_id" --output json 2>/dev/null)
+        fi
+
+        if [ $? -ne 0 ]; then
+            echo "Error: Failed to retrieve parent information for $current_id" >&2
+            return 1
+        fi
+
+        parent_id=$(echo "$parent_info" | jq -r '.Parents[0].Id')
+        parent_type=$(echo "$parent_info" | jq -r '.Parents[0].Type')
+
+        if [ "$parent_type" == "ROOT" ]; then
+            # We've reached the root, prepend it to the path and break
+            path="$path"
+            break
+        elif [ "$parent_type" == "ORGANIZATIONAL_UNIT" ]; then
+            # Get the OU name
+            ou_info=$(aws organizations describe-organizational-unit --organizational-unit-id "$parent_id" --output json 2>/dev/null)
+            if [ $? -ne 0 ]; then
+                echo "Error: Failed to retrieve OU information for $parent_id" >&2
+                return 1
+            fi
+            ou_name=$(echo "$ou_info" | jq -r '.OrganizationalUnit.Name')
+            path="/$ou_name$path"
+        else
+            echo "Error: Unexpected parent type: $parent_type" >&2
+            return 1
+        fi
+
+        current_id="$parent_id"
+        is_account=false
+    done
+
+    echo "$path"
+}
+
 # Function to parse command-line arguments
 parse_arguments() {
     CREATE_DIRECTORIES=false
     CREATE_REPOS_MD=false
     DEVELOPER_ROLE_NAME=""
     SSO_NAME=""
+    USE_OU_STRUCTURE=false
     while [[ $# -gt 0 ]]; do
         case $1 in
             --developer-role-name)
@@ -224,6 +292,10 @@ parse_arguments() {
                 ;;
             --create-repos-md)
                 CREATE_REPOS_MD=true
+                shift
+                ;;
+            --use-ou-structure)
+                USE_OU_STRUCTURE=true
                 shift
                 ;;
             *)
@@ -253,7 +325,7 @@ main() {
 
     sso_login
     token=$(get_access_token)
-    generate_aws_config "$token" "$DEVELOPER_ROLE_NAME" "$CREATE_DIRECTORIES" "$SSO_NAME" "$CREATE_REPOS_MD"
+    generate_aws_config "$token" "$DEVELOPER_ROLE_NAME" "$CREATE_DIRECTORIES" "$SSO_NAME" "$CREATE_REPOS_MD" "$USE_OU_STRUCTURE"
 
     log "AWS configuration completed successfully"
     if $CREATE_DIRECTORIES || test -n "$DEVELOPER_ROLE_NAME"; then

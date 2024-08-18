@@ -63,6 +63,7 @@ jobs:
           # make sure aws-utils is installed
           depends_on: |
              "easytocloud/tap/aws-utils"
+             "direnv"
           
           # Custom install command for your formula.
           # Required - string.

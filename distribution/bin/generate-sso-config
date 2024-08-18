@@ -286,31 +286,31 @@ parse_arguments() {
     USE_OU_STRUCTURE=false
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --developer-role-name)
+            --developer-role-name) #  create .envrc files for the specified role
                 DEVELOPER_ROLE_NAME="$2"
                 shift 2
                 ;;
-            --create-directories)
+            --create-directories) # create a directory for each account the user can assume any role in
                 CREATE_DIRECTORIES=true
                 shift
                 ;;
-            --sso-name)
+            --sso-name) # use the specified SSO name in stead of the one extracted from the SSO start URL
                 SSO_NAME="$2"
                 shift 2
                 ;;
-            --create-repos-md)
+            --create-repos-md) # run cclist --create-repos-md for each account directory
                 CREATE_REPOS_MD=true
                 shift
                 ;;
-            --use-ou-structure)
+            --use-ou-structure) # use the OU structure in the unified environment
                 USE_OU_STRUCTURE=true
                 shift
                 ;;
-            --skip-sso-name)
+            --skip-sso-name) # do not use the SSO name in the path
                 SSO_NAME="/"
                 shift
                 ;;
-            --unified-root)
+            --unified-root) # use a different root directory for the unified environment
                 # if absolute path is not provided, use the provided path as a suffix to the home directory
                 if [[ "$2" != /* ]]; then
                     UNIFIED_ROOT="${HOME}/$2"

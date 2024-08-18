@@ -1,3 +1,10 @@
+## [0.5.2](https://github.com/easytocloud/sso-tools/compare/v0.5.1...v0.5.2) (2024-08-18)
+
+
+### Bug Fixes
+
+* fixed error in REGION handling, added --help and updated README accordingly ([45eee0a](https://github.com/easytocloud/sso-tools/commit/45eee0a89a31aab26e7bc76c260e734939e46bbf))
+
 ## [0.5.1](https://github.com/easytocloud/sso-tools/compare/v0.5.0...v0.5.1) (2024-08-18)
 
 

@@ -296,7 +296,7 @@ parse_arguments() {
     CREATE_DIRECTORIES=false
     CREATE_REPOS_MD=false
     DEVELOPER_ROLE_NAME=""
-    SSO_NAME=""
+    SSO_NAME="${SSO_NAME:-}"
     USE_OU_STRUCTURE=false
     while [[ $# -gt 0 ]]; do
         case $1 in

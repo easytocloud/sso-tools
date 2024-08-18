@@ -25,10 +25,11 @@ This command will install SSO Tools along with its dependencies (`cclist` and `d
 
 **Note:** The AWS CLI is not automatically installed and should be set up separately if not already present on your system.
 
-## Setup and Configuration
+## Usage
 
-1. Ensure you have AWS CLI v2 installed and configured for SSO access.
-2. Run the `generate-sso-config` command to create your AWS CLI config file and directory structure:
+### Basic Usage
+
+To generate the AWS CLI config and create the directory structure:
 
 ```bash
 generate-sso-config --create-directories
@@ -36,58 +37,26 @@ generate-sso-config --create-directories
 
 This command will:
 - Create or update your AWS CLI config file (`~/.aws/config`)
-- Generate a directory structure under `~/unified-environment/` (or `~/environment` in cloud9)
+- Generate a directory structure under `~/unified-environment/`
 - Create `.envrc` files in each account directory
 
-## Usage
+### Command-line Options
 
-After setting up SSO Tools, you have three options for working with AWS CLI:
+Run `generate-sso-config --help` to see all available options:
 
-1. Use the `--profile` option with each AWS CLI command:
-   ```bash
-   aws s3 ls --profile RoleName@AccountName
-   ```
+```
+Usage: generate-sso-config [OPTIONS]
 
-2. Set the `AWS_PROFILE` environment variable:
-   ```bash
-   export AWS_PROFILE=RoleName@AccountName
-   aws s3 ls
-   ```
-
-3. Use `direnv` for automatic profile switching (recommended):
-   ```bash
-   cd ~/unified-environment/my-sso/AccountName
-   aws s3 ls  # AWS_PROFILE is automatically set by direnv
-   ```
-
-### Daily Workflow
-
-1. Start your AWS SSO session:
-   ```bash
-   ssostart
-   ```
-   This will open a browser window for authentication.
-
-2. Navigate to the desired account directory:
-   ```bash
-   cd ~/unified-environment/my-sso/AccountName
-   ```
-
-3. Run AWS CLI commands without specifying a profile:
-   ```bash
-   aws s3 ls
-   ```
-
-## Command-line Options
-
-The `generate-sso-config` command supports several options to customize its behavior:
-
-- `--create-directories`: Creates the directory structure and `.envrc` files
-- `--use-ou-structure`: Organizes the directory structure based on your AWS Organization's OU hierarchy
-- `--developer-role-name <role>`: Specifies a particular role to use for directory creation
-- `--sso-name <name>`: Sets a custom name for the SSO configuration (default is extracted from the SSO start URL)
-- `--skip-sso` : Does not add the sso-name in the directory structure. (useful when working with single SSO like in cloud9)
-- `--create-repos-md`: Generates a `repos.md` file in each account directory (requires `cclist` tool)
+Options:
+  --create-directories        Create a directory for each account the user can assume any role in
+  --use-ou-structure          Use the OU structure in the unified environment
+  --developer-role-name NAME  Create .envrc files for the specified role
+  --sso-name NAME             Use the specified SSO name instead of the one extracted from the SSO start URL
+  --create-repos-md           Run cclist --create-repos-md for each account directory
+  --skip-sso-name             Do not use the SSO name in the path
+  --unified-root PATH         Use a different root directory for the unified environment
+  --help                      Display this help message and exit
+```
 
 ### Examples
 
@@ -106,9 +75,30 @@ The `generate-sso-config` command supports several options to customize its beha
    generate-sso-config --create-directories --sso-name my-company-sso
    ```
 
+## Working with AWS CLI
+
+After running `generate-sso-config`, you have three options for working with AWS CLI:
+
+1. Use the `--profile` option with each AWS CLI command:
+   ```bash
+   aws s3 ls --profile RoleName@AccountName
+   ```
+
+2. Set the `AWS_PROFILE` environment variable:
+   ```bash
+   export AWS_PROFILE=RoleName@AccountName
+   aws s3 ls
+   ```
+
+3. Use `direnv` for automatic profile switching (recommended):
+   ```bash
+   cd ~/unified-environment/my-sso/AccountName
+   aws s3 ls  # AWS_PROFILE is automatically set by direnv
+   ```
+
 ## How It Works
 
-1. The tool generates an AWS CLI config file with profiles for each role in each account the user can assume.
+1. The tool generates an AWS CLI config file with profiles for each role in each account.
 2. It creates a directory structure under `~/unified-environment/` that mirrors your AWS accounts (and optionally, your OU structure).
 3. In each account directory, it creates an `.envrc` file that sets the appropriate `AWS_PROFILE` environment variable.
 4. When you navigate into an account directory, `direnv` automatically loads the environment, setting the correct AWS profile.

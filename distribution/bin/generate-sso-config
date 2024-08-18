@@ -310,6 +310,15 @@ parse_arguments() {
                 SSO_NAME="/"
                 shift
                 ;;
+            --unified-root)
+                # if absolute path is not provided, use the provided path as a suffix to the home directory
+                if [[ "$2" != /* ]]; then
+                    UNIFIED_ROOT="${HOME}/$2"
+                else
+                    UNIFIED_ROOT="$2"
+                fi
+                shift 2
+                ;;
             *)
                 log "Unknown option: $1"
                 exit 1

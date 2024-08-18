@@ -1,3 +1,10 @@
+## [0.5.3](https://github.com/easytocloud/sso-tools/compare/v0.5.2...v0.5.3) (2024-08-18)
+
+
+### Bug Fixes
+
+* fixed error that prevented skipping SSO_NAME in cloud9 ([ddb5e65](https://github.com/easytocloud/sso-tools/commit/ddb5e65115ca10de7edf8c74fcee34f931c0cc41))
+
 ## [0.5.2](https://github.com/easytocloud/sso-tools/compare/v0.5.1...v0.5.2) (2024-08-18)
 
 

@@ -6,25 +6,25 @@ set -euo pipefail
 AWS_CONFIG_FILE="${AWS_CONFIG_FILE:-${HOME}/.aws/config}"
 SSO_CACHE_DIR="${HOME}/.aws/sso/cache"
 DEFAULT_SSO_REGION="eu-west-1"
-SSO_UNIFIED_DIR="${HOME}/sso-unified"
+UNIFIED_ROOT="${UNIFIED_ROOT:-${HOME}/unified-environment}"
 
-export AWS_DEFAULT_REGION=${DEFAULT_SSO_REGION}
+export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-DEFAULT_SSO_REGION}
 
-# if username is ec2-user and a directory environment exists in the users home directory, use that as the SSO_UNIFIED_DIR
-if [[ $(whoami) == "ec2-user" ]]; then
-    if [[ -d "/home/ec2-user/environment" ]]; then
-        SSO_UNIFIED_DIR="/home/ec2-user/environment"
-    fi
-fi
-
-# if ${AWS_CONFIG_FILE} is a symlink, set it to the target
-if [[ -L ${AWS_CONFIG_FILE} ]]; then
-    AWS_CONFIG_FILE=$(readlink -f ${AWS_CONFIG_FILE})
-fi
 
 # Function to log messages
 log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" >&2
+}
+
+## Function to check if running in Cloud9 - if so, set UNIFIED_ROOT to ~/environment and skip SSO_NAME
+check_cloud9(){
+    # if username is ec2-user and a directory environment exists in the users home directory, use that as the UNIFIED_ROOT
+    if [[ $(whoami) == "ec2-user" ]]; then
+        if [[ -d "/home/ec2-user/environment" ]]; then
+            UNIFIED_ROOT="/home/ec2-user/environment"
+            SSO_NAME="/"
+        fi
+    fi
 }
 
 # Function to ensure AWS config file exists
@@ -134,13 +134,21 @@ create_envrc_file_and_run_cclist() {
     local account_id=$6
     local use_ou_structure=$7
     local account_dir
+    local unified_dir
 
+    # if sso_name is not empty and not '/' then add it to the path
+    if [[ -n "$sso_name" ]] && [[ "$sso_name" != "/" ]]; then
+        unified_dir=${UNIFIED_ROOT}/${sso_name}
+    else
+        unified_dir=${UNIFIED_ROOT}
+    fi
+    
     if $use_ou_structure; then
         local ou_path
         ou_path=$(find_ou_path "$account_id")
-        account_dir="${SSO_UNIFIED_DIR}/${sso_name}${ou_path}/${account_name}"
+        account_dir="${unified_dir}${ou_path}/${account_name}"
     else
-        account_dir="${SSO_UNIFIED_DIR}/${sso_name}/${account_name}"
+        account_dir="${unified_dir}/${account_name}"
     fi
     
     mkdir -p "${account_dir}"
@@ -298,6 +306,10 @@ parse_arguments() {
                 USE_OU_STRUCTURE=true
                 shift
                 ;;
+            --skip-sso-name)
+                SSO_NAME="/"
+                shift
+                ;;
             *)
                 log "Unknown option: $1"
                 exit 1
@@ -308,6 +320,8 @@ parse_arguments() {
 
 # Main execution
 main() {
+    
+    check_cloud9
     parse_arguments "$@"
 
     ensure_aws_config
@@ -329,7 +343,7 @@ main() {
 
     log "AWS configuration completed successfully"
     if $CREATE_DIRECTORIES || test -n "$DEVELOPER_ROLE_NAME"; then
-        log ".envrc files creation completed successfully under ${SSO_UNIFIED_DIR}/${SSO_NAME}"
+        log ".envrc files creation completed successfully under ${UNIFIED_ROOT}"
         if $CREATE_REPOS_MD; then
             log "cclist --create-repos-md executed for each account directory"
         fi

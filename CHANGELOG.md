@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/easytocloud/sso-tools/compare/v0.4.1...v0.5.0) (2024-08-18)
+
+
+### Features
+
+* added OU structure support and detect running in cloud9 to use ~/environment ([639003f](https://github.com/easytocloud/sso-tools/commit/639003f11448d0d74afc09d6e82411e9f8778f27))
+
 ## [0.4.1](https://github.com/easytocloud/sso-tools/compare/v0.4.0...v0.4.1) (2024-08-17)
 
 

@@ -1,3 +1,10 @@
+## [0.5.5](https://github.com/easytocloud/sso-tools/compare/v0.5.4...v0.5.5) (2024-08-20)
+
+
+### Bug Fixes
+
+* completions added ([0d1e582](https://github.com/easytocloud/sso-tools/commit/0d1e582bacb3b4c77b116d5f9737192f4861c645))
+
 ## [0.5.4](https://github.com/easytocloud/sso-tools/compare/v0.5.3...v0.5.4) (2024-08-20)
 
 

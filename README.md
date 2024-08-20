@@ -49,7 +49,7 @@ Usage: generate-sso-config [OPTIONS]
 
 Options:
   --create-directories        Create a directory for each account the user can assume any role in
-  --use-ou-structure          Use the OU structure in the unified environment
+  --use-ou-structure          Use the OU structure in the unified environment [see note]
   --developer-role-name NAME  Create .envrc files for the specified role
   --sso-name NAME             Use the specified SSO name instead of the one extracted from the SSO start URL
   --create-repos-md           Run cclist --create-repos-md for each account directory
@@ -64,6 +64,7 @@ Options:
    ```bash
    generate-sso-config --create-directories --use-ou-structure
    ```
+   NOTE: requires Organizations:List* and Organizations:Describe* permission in Organizations main account.
 
 2. Generate config for a specific developer role:
    ```bash

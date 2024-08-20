@@ -64,6 +64,7 @@ jobs:
           depends_on: |
              "easytocloud/tap/aws-utils"
              "direnv"
+             "jq"
           
           # Custom install command for your formula.
           # Required - string.

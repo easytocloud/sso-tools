@@ -1,0 +1,19 @@
+#compdef generate-sso-config
+
+_generate-sso-config() {
+  local -a options
+  options=(
+    '--create-directories[Create a directory for each account the user can assume any role in]'
+    '--use-ou-structure[Use the OU structure in the unified environment]'
+    '--developer-role-name[Create .envrc files for the specified role]:role name:'
+    '--sso-name[Use the specified SSO name instead of the one extracted from the SSO start URL]:sso name:'
+    '--create-repos-md[Run cclist --create-repos-md for each account directory]'
+    '--skip-sso-name[Do not use the SSO name in the path]'
+    '--unified-root[Use a different root directory for the unified environment]:path:'
+    '--help[Display help message and exit]'
+  )
+
+  _arguments -s $options
+}
+
+_generate-sso-config "$@"

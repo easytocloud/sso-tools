@@ -70,6 +70,7 @@ jobs:
           install: |
             bin.install "distribution/bin/ssostart"
             bin.install "distribution/bin/generate-sso-config"
+            zsh_completion.install "distribution/completions/_generate-sso-config"
 
           # Custom test command for your formula so you can run `brew test`.
           # Optional - string.

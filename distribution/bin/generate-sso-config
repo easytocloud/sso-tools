@@ -174,7 +174,7 @@ create_envrc_file_and_run_cclist() {
     local account_dir
     local unified_dir
 
-    AWSENVS_ROOT="${AWSENVS_ROOT:~/.aws/aws-envs}"
+    #AWSENVS_ROOT="${AWSENVS_ROOT:-~/.aws/aws-envs}"
 
     # if sso_name is not empty and not '/' then add it to the path
     if [[ -n "$sso_name" ]] && [[ "$sso_name" != "/" ]]; then

@@ -237,14 +237,14 @@ generate_aws_config() {
         local profile_for_envrc
 
         echo "# >>> BEGIN GENERATED CONFIG | $(date) | for ${sso_name} | on $(hostname) <<<"
-        aws sso list-accounts --access-token "$token" | 
+        aws sso list-accounts --access-token "$token" | tee |
         jq -r '.accountList[] | (.accountId, .accountName)' | 
         sed 'N;s/\n/ /' | 
         while read -r id name; do
             # echo -n "." >&2
             name=$(echo "$name" | tr ' )()' '___')
             local first_role=true
-            aws sso list-account-roles --access-token "$token" --account-id "$id" | 
+            aws sso list-account-roles --access-token "$token" --account-id "$id" | tee |
             jq -r '.roleList[].roleName' | 
             while read -r rolename; do
                 rolename=$(echo "$rolename" | tr ' ' '_')

@@ -236,7 +236,7 @@ generate_aws_config() {
     {
         local profile_for_envrc
 
-        echo "# >>> BEGIN GENERATED CONFIG <<<"
+        echo "# >>> BEGIN GENERATED CONFIG | $(date) | for ${sso_name} | on $(hostname) <<<"
         aws sso list-accounts --access-token "$token" | 
         jq -r '.accountList[] | (.accountId, .accountName)' | 
         sed 'N;s/\n/ /' | 

@@ -1,3 +1,10 @@
+## [0.5.8](https://github.com/easytocloud/sso-tools/compare/v0.5.7...v0.5.8) (2024-08-20)
+
+
+### Bug Fixes
+
+* removed additional special characters from account name ([99fa733](https://github.com/easytocloud/sso-tools/commit/99fa73352668b4a3ba804bd12ba96125fd8cc9e1))
+
 ## [0.5.7](https://github.com/easytocloud/sso-tools/compare/v0.5.6...v0.5.7) (2024-08-20)
 
 

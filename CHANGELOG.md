@@ -1,3 +1,10 @@
+## [0.5.7](https://github.com/easytocloud/sso-tools/compare/v0.5.6...v0.5.7) (2024-08-20)
+
+
+### Bug Fixes
+
+* added jq to dependencies ([a7d709c](https://github.com/easytocloud/sso-tools/commit/a7d709c8db85893359074da6cd1105e799fb9efc))
+
 ## [0.5.6](https://github.com/easytocloud/sso-tools/compare/v0.5.5...v0.5.6) (2024-08-20)
 
 

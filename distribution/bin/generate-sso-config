@@ -242,7 +242,7 @@ generate_aws_config() {
         sed 'N;s/\n/ /' | 
         while read -r id name; do
             # echo -n "." >&2
-            name=$(echo "$name" | tr ' ' '_')
+            name=$(echo "$name" | tr ' )()' '___')
             local first_role=true
             aws sso list-account-roles --access-token "$token" --account-id "$id" | 
             jq -r '.roleList[].roleName' | 

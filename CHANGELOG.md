@@ -1,3 +1,10 @@
+## [0.5.9](https://github.com/easytocloud/sso-tools/compare/v0.5.8...v0.5.9) (2024-08-20)
+
+
+### Bug Fixes
+
+* removed broken pipe error ([69e18d3](https://github.com/easytocloud/sso-tools/commit/69e18d3596839fce4b77ae149a876ce5b9902118))
+
 ## [0.5.8](https://github.com/easytocloud/sso-tools/compare/v0.5.7...v0.5.8) (2024-08-20)
 
 

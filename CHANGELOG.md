@@ -1,3 +1,10 @@
+## [0.5.6](https://github.com/easytocloud/sso-tools/compare/v0.5.5...v0.5.6) (2024-08-20)
+
+
+### Bug Fixes
+
+* timestamp added for insights in generated config ([65f459a](https://github.com/easytocloud/sso-tools/commit/65f459a8324f195bfab1053033eb0167e52992ee))
+
 ## [0.5.5](https://github.com/easytocloud/sso-tools/compare/v0.5.4...v0.5.5) (2024-08-20)
 
 

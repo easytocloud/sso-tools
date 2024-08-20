@@ -4,11 +4,14 @@ set -euo pipefail
 
 # Configuration
 AWS_CONFIG_FILE="${AWS_CONFIG_FILE:-${HOME}/.aws/config}"
+CONFIG_FILE_TO_WRITE=""
 SSO_CACHE_DIR="${HOME}/.aws/sso/cache"
 DEFAULT_SSO_REGION="eu-west-1"
 UNIFIED_ROOT="${UNIFIED_ROOT:-${HOME}/unified-environment}"
 
 export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-$DEFAULT_SSO_REGION}
+
+AWS_PROFILE_ORGANIZER=false
 
 # Function to display help message
 help() {
@@ -41,26 +44,47 @@ check_cloud9(){
     fi
 }
 
+# Function to determine the correct config file to write to
+determine_config_file() {
+    if [[ -L "$AWS_CONFIG_FILE" ]]; then
+        local target=$(readlink -f "$AWS_CONFIG_FILE")
+        if [[ $target == */aws-envs/* ]]; then
+            CONFIG_FILE_TO_WRITE="$target"
+        else
+            CONFIG_FILE_TO_WRITE="$AWS_CONFIG_FILE"
+        fi
+    else
+        CONFIG_FILE_TO_WRITE="$AWS_CONFIG_FILE"
+    fi
+    log "Config file to write: $CONFIG_FILE_TO_WRITE"
+}
+
 # Function to ensure AWS config file exists
 ensure_aws_config() {
-    local AWS_CONFIG_DIR=$(dirname "$AWS_CONFIG_FILE")
-    test -d ${AWS_CONFIG_DIR} || mkdir -p "$(dirname "$AWS_CONFIG_FILE")"
-    test -f ${AWS_CONFIG_FILE} || touch "$AWS_CONFIG_FILE"
+    determine_config_file
+    local CONFIG_DIR=$(dirname "$CONFIG_FILE_TO_WRITE")
+    test -d "$CONFIG_DIR" || mkdir -p "$CONFIG_DIR"
+    test -f "$CONFIG_FILE_TO_WRITE" || touch "$CONFIG_FILE_TO_WRITE"
+
+    if [[ -d ~/.aws/aws-envs ]]; then
+        log "Found existing aws-envs directory"
+        AWS_PROFILE_ORGANIZER=true
+    fi
 }
 
 # Function to check if SSO session is configured
 is_sso_session_configured() {
-    grep -q '\[sso-session sso\]' "$AWS_CONFIG_FILE"
+    grep -q '\[sso-session sso\]' "$CONFIG_FILE_TO_WRITE"
 }
 
 # Function to get SSO start URL
 get_sso_start_url() {
     local sso_start_url
 
-    if grep -q 'sso_start_url' "$AWS_CONFIG_FILE"; then
+    if grep -q 'sso_start_url' "$CONFIG_FILE_TO_WRITE"; then
         log "SSO configuration in place"
         log "Attempting to use existing sso_start_url"
-        sso_start_url=$(grep 'sso_start_url' "$AWS_CONFIG_FILE" | tr -d ' ' | cut -f2 -d'=' | sort -u)
+        sso_start_url=$(grep 'sso_start_url' "$CONFIG_FILE_TO_WRITE" | tr -d ' ' | cut -f2 -d'=' | sort -u)
         
         if [[ $(echo "$sso_start_url" | wc -l) -eq 1 ]]; then
             log "Using $sso_start_url for sso_start_url"
@@ -103,14 +127,14 @@ configure_sso_session() {
         echo "sso_start_url = $sso_start_url"
         echo "sso_registration_scopes = sso:account:access"
         echo ""
-    } >> "$AWS_CONFIG_FILE"
+    } >> "$CONFIG_FILE_TO_WRITE"
 }
 
 # Function to perform SSO login
 sso_login() {
     if aws sso login --sso-session sso; then
         log "Started SSO session"
-        log "Patience please while $AWS_CONFIG_FILE is completed - this might take a few minutes"
+        log "Patience please while $CONFIG_FILE_TO_WRITE is completed - this might take a few minutes"
     else
         log "SSO login failed"
         exit 1
@@ -150,6 +174,8 @@ create_envrc_file_and_run_cclist() {
     local account_dir
     local unified_dir
 
+    AWSENVS_ROOT="${AWSENVS_ROOT:~/.aws/aws-envs}"
+
     # if sso_name is not empty and not '/' then add it to the path
     if [[ -n "$sso_name" ]] && [[ "$sso_name" != "/" ]]; then
         unified_dir=${UNIFIED_ROOT}/${sso_name}
@@ -166,7 +192,7 @@ create_envrc_file_and_run_cclist() {
     fi
     
     mkdir -p "${account_dir}"
-    CONFIG_DIR=${AWS_CONFIG_FILE%/*}
+    CONFIG_DIR=$(dirname "$CONFIG_FILE_TO_WRITE")
     #if parent directory of CONFIG_DIR is named aws-envs then CONFIG_DIR is '~/.aws/aws-envs/<lastpartofCONFIG_DIR>'
     if [[ $(basename $(dirname $CONFIG_DIR)) == "aws-envs" ]]; then
         CONFIG_DIR="~/.aws/aws-envs/$(basename $CONFIG_DIR)"
@@ -205,7 +231,7 @@ generate_aws_config() {
     temp_file=$(mktemp)
 
     # Copy existing config without generated part
-    sed '/^# >>> BEGIN/,/^# >>> END/d' "$AWS_CONFIG_FILE" > "$temp_file"
+    sed '/^# >>> BEGIN/,/^# >>> END/d' "$CONFIG_FILE_TO_WRITE" > "$temp_file"
 
     {
         local profile_for_envrc
@@ -240,7 +266,7 @@ generate_aws_config() {
         echo ""
     } >> "$temp_file"
 
-    mv "$temp_file" "$AWS_CONFIG_FILE"
+    mv "$temp_file" "$CONFIG_FILE_TO_WRITE"
 }
 
 find_ou_path() {
@@ -355,7 +381,7 @@ main() {
         sso_start_url=$(get_sso_start_url)
         configure_sso_session "$sso_start_url"
     else
-        sso_start_url=$(grep 'sso_start_url' "$AWS_CONFIG_FILE" | tr -d ' ' | cut -f2 -d'=' | tail -1)
+        sso_start_url=$(grep 'sso_start_url' "$CONFIG_FILE_TO_WRITE" | tr -d ' ' | cut -f2 -d'=' | tail -1)
     fi
 
     if [ -z "$SSO_NAME" ]; then

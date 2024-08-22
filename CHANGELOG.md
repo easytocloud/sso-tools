@@ -1,3 +1,10 @@
+## [0.5.11](https://github.com/easytocloud/sso-tools/compare/v0.5.10...v0.5.11) (2024-08-22)
+
+
+### Bug Fixes
+
+* fixed dependency on aws-utils to codecommit-utils ([043519b](https://github.com/easytocloud/sso-tools/commit/043519b8d3bc6d054d7837e835f9d3ea082d7147))
+
 ## [0.5.10](https://github.com/easytocloud/sso-tools/compare/v0.5.9...v0.5.10) (2024-08-22)
 
 

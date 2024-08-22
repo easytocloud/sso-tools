@@ -62,7 +62,7 @@ jobs:
           # Optional - multiline string.
           # make sure aws-utils is installed
           depends_on: |
-             "easytocloud/tap/aws-utils"
+             "easytocloud/tap/codecommit-utils"
              "direnv"
              "jq"
           

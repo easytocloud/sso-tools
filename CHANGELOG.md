@@ -1,3 +1,10 @@
+## [0.5.10](https://github.com/easytocloud/sso-tools/compare/v0.5.9...v0.5.10) (2024-08-22)
+
+
+### Bug Fixes
+
+* generated profiles have region ([d4cefb5](https://github.com/easytocloud/sso-tools/commit/d4cefb5c38eac8cfe59d57a9ab26fd36b9cd6195))
+
 ## [0.5.9](https://github.com/easytocloud/sso-tools/compare/v0.5.8...v0.5.9) (2024-08-20)
 
 

@@ -42,6 +42,7 @@ check_cloud9(){
         if [[ -d "/home/ec2-user/environment" ]]; then
             UNIFIED_ROOT="/home/ec2-user/environment"
             SSO_NAME="/"
+            USE_OU_STRUCTURE=true
         fi
     fi
 }
@@ -360,7 +361,7 @@ parse_arguments() {
     CREATE_REPOS_MD=false
     DEVELOPER_ROLE_NAME=""
     SSO_NAME="${SSO_NAME:-}"
-    USE_OU_STRUCTURE=false
+    USE_OU_STRUCTURE="${USE_OU_STRUCTURE:-false}"
     while [[ $# -gt 0 ]]; do
         case $1 in
             --developer-role-name)

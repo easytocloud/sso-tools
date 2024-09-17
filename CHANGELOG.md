@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/easytocloud/sso-tools/compare/v0.5.11...v0.6.0) (2024-09-17)
+
+
+### Features
+
+* added .envrc source_up and scratch directory per account ([918b8cd](https://github.com/easytocloud/sso-tools/commit/918b8cd8ec8773de689c301f31d4f69dcd73cf04))
+
 ## [0.5.11](https://github.com/easytocloud/sso-tools/compare/v0.5.10...v0.5.11) (2024-08-22)
 
 

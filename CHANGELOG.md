@@ -1,3 +1,10 @@
+## [0.6.1](https://github.com/easytocloud/sso-tools/compare/v0.6.0...v0.6.1) (2024-09-17)
+
+
+### Bug Fixes
+
+* in ec2 use OU structure ([54c049a](https://github.com/easytocloud/sso-tools/commit/54c049abfe1c08ffe854f79156562aa5c1aab0c3))
+
 # [0.6.0](https://github.com/easytocloud/sso-tools/compare/v0.5.11...v0.6.0) (2024-09-17)
 
 

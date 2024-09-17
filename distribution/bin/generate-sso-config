@@ -46,6 +46,16 @@ check_cloud9(){
     fi
 }
 
+# Function to ensure UNIFIED_ROOT directory exists
+ensure_unified_root() {
+    if [[ ! -d "$UNIFIED_ROOT" ]]; then
+        mkdir -p "$UNIFIED_ROOT"
+        log "Created UNIFIED_ROOT directory: $UNIFIED_ROOT"
+    else
+        log "UNIFIED_ROOT directory already exists: $UNIFIED_ROOT"
+    fi
+}
+
 # Function to determine the correct config file to write to
 determine_config_file() {
     if [[ -L "$AWS_CONFIG_FILE" ]]; then
@@ -59,6 +69,35 @@ determine_config_file() {
         CONFIG_FILE_TO_WRITE="$AWS_CONFIG_FILE"
     fi
     log "Config file to write: $CONFIG_FILE_TO_WRITE"
+}
+
+# Function to create SSO organization .envrc file
+create_sso_org_envrc() {
+    local sso_name=$1
+    local sso_org_dir
+
+    if [[ -n "$sso_name" ]] && [[ "$sso_name" != "/" ]]; then
+        sso_org_dir="${UNIFIED_ROOT}/${sso_name}"
+    else
+        sso_org_dir="${UNIFIED_ROOT}"
+    fi
+
+    mkdir -p "$sso_org_dir"
+    local config_dir=$(dirname "$CONFIG_FILE_TO_WRITE")
+    
+    cat << EOF > "${sso_org_dir}/.envrc"
+export AWS_CONFIG_FILE=${config_dir}/config
+export AWS_SHARED_CREDENTIALS_FILE=${config_dir}/credentials
+EOF
+    
+    log "Created SSO organization .envrc file at ${sso_org_dir}/.envrc"
+    
+    # Allow the top-level .envrc file
+    (
+        cd "${sso_org_dir}" || exit
+        direnv allow
+    )
+    log "Allowed top-level .envrc file with direnv"
 }
 
 # Function to ensure AWS config file exists
@@ -176,9 +215,6 @@ create_envrc_file_and_run_cclist() {
     local account_dir
     local unified_dir
 
-    #AWSENVS_ROOT="${AWSENVS_ROOT:-~/.aws/aws-envs}"
-
-    # if sso_name is not empty and not '/' then add it to the path
     if [[ -n "$sso_name" ]] && [[ "$sso_name" != "/" ]]; then
         unified_dir=${UNIFIED_ROOT}/${sso_name}
     else
@@ -194,27 +230,22 @@ create_envrc_file_and_run_cclist() {
     fi
     
     mkdir -p "${account_dir}"
-    CONFIG_DIR=$(dirname "$CONFIG_FILE_TO_WRITE")
-    #if parent directory of CONFIG_DIR is named aws-envs then CONFIG_DIR is '~/.aws/aws-envs/<lastpartofCONFIG_DIR>'
-    if [[ $(basename $(dirname $CONFIG_DIR)) == "aws-envs" ]]; then
-        CONFIG_DIR="~/.aws/aws-envs/$(basename $CONFIG_DIR)"
-    fi
+    mkdir -p "${account_dir}/scratch"
 
     cat << EOF > "${account_dir}/.envrc"
-export AWS_CONFIG_FILE=${CONFIG_DIR}/config
-export AWS_SHARED_CREDENTIALS_FILE=${CONFIG_DIR}/credentials
+source_up
 export AWS_PROFILE=${profile_name}
 export AWS_DEFAULT_REGION=${DEFAULT_SSO_REGION}
 EOF
 
     log "Created .envrc file for ${account_dir}"
+    log "Created scratch directory: ${account_dir}/scratch"
 
     if $create_repos_md; then
         log "Running direnv allow and cclist for ${account_dir}"
         (
             cd "${account_dir}" || exit
             direnv allow
-            source .envrc
             export AWS_CONFIG_FILE=$temp_file
             cclist --create-repos-md
         )
@@ -231,6 +262,9 @@ generate_aws_config() {
     local use_ou_structure=$6
     local temp_file
     temp_file=$(mktemp)
+
+    # Create SSO organization .envrc file
+    create_sso_org_envrc "$sso_name"
 
     # Copy existing config without generated part
     sed '/^# >>> BEGIN/,/^# >>> END/d' "$CONFIG_FILE_TO_WRITE" > "$temp_file"
@@ -381,7 +415,7 @@ parse_arguments() {
 main() {
     check_cloud9
     parse_arguments "$@"
-
+    ensure_unified_root
     ensure_aws_config
 
     if ! is_sso_session_configured; then

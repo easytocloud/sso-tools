@@ -1,3 +1,10 @@
+## [0.6.3](https://github.com/easytocloud/sso-tools/compare/v0.6.2...v0.6.3) (2024-09-27)
+
+
+### Bug Fixes
+
+* added --overwrite-envrc flag (default no overwrite) ([a3aaf89](https://github.com/easytocloud/sso-tools/commit/a3aaf8978ef522eaa2794b599b756231872842b3))
+
 ## [0.6.2](https://github.com/easytocloud/sso-tools/compare/v0.6.1...v0.6.2) (2024-09-27)
 
 

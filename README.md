@@ -75,6 +75,9 @@ Options:
    ```bash
    generate-sso-config --create-directories --sso-name my-company-sso
    ```
+When calling generate-sso-config in the root of a directory structure it created,
+it will pickup the CLI parameters from the .generate-sso-config it stored.
+This ensures one can call generate-sso-config when adding accounts to your AWS organization.
 
 ## Working with AWS CLI
 

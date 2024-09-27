@@ -355,13 +355,58 @@ find_ou_path() {
     echo "$path"
 }
 
+# Function to save parameters to .generate-sso-config file
+save_parameters() {
+    local sso_dir
+    if [[ -n "$SSO_NAME" ]] && [[ "$SSO_NAME" != "/" ]]; then
+        sso_dir="${UNIFIED_ROOT}/${SSO_NAME}"
+    else
+        sso_dir="${UNIFIED_ROOT}"
+    fi
+    local config_file="${sso_dir}/.generate-sso-config"
+    
+    mkdir -p "$sso_dir"
+    {
+        echo "CREATE_DIRECTORIES=$CREATE_DIRECTORIES"
+        echo "CREATE_REPOS_MD=$CREATE_REPOS_MD"
+        echo "DEVELOPER_ROLE_NAME=$DEVELOPER_ROLE_NAME"
+        echo "SSO_NAME=$SSO_NAME"
+        echo "USE_OU_STRUCTURE=$USE_OU_STRUCTURE"
+        echo "UNIFIED_ROOT=$UNIFIED_ROOT"
+        echo "DEFAULT_PROFILE_REGION=$DEFAULT_PROFILE_REGION"
+    } > "$config_file"
+    log "Saved parameters to $config_file"
+}
+
+# Function to read parameters from .generate-sso-config file
+read_parameters() {
+    local config_file="${PWD}/.generate-sso-config"
+    
+    if [[ -f "$config_file" ]]; then
+        source "$config_file"
+        log "Loaded parameters from $config_file"
+    else
+        log "No saved parameters found in current directory"
+    fi
+}
+
 # Function to parse command-line arguments
 parse_arguments() {
+    # Set default values
     CREATE_DIRECTORIES=false
     CREATE_REPOS_MD=false
     DEVELOPER_ROLE_NAME=""
     SSO_NAME="${SSO_NAME:-}"
     USE_OU_STRUCTURE="${USE_OU_STRUCTURE:-false}"
+
+    # If no arguments are provided, try to read from the config file
+    if [[ $# -eq 0 ]]; then
+        read_parameters
+        # If UNIFIED_ROOT is not set after reading parameters, set it to the parent directory
+        UNIFIED_ROOT="${UNIFIED_ROOT:-$(dirname "$PWD")}"
+        return
+    fi
+
     while [[ $# -gt 0 ]]; do
         case $1 in
             --developer-role-name)
@@ -433,6 +478,9 @@ main() {
     sso_login
     token=$(get_access_token)
     generate_aws_config "$token" "$DEVELOPER_ROLE_NAME" "$CREATE_DIRECTORIES" "$SSO_NAME" "$CREATE_REPOS_MD" "$USE_OU_STRUCTURE"
+
+    # Save the parameters after successful execution
+    save_parameters
 
     log "AWS configuration completed successfully"
     if $CREATE_DIRECTORIES || test -n "$DEVELOPER_ROLE_NAME"; then

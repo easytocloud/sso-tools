@@ -1,3 +1,10 @@
+## [0.6.4](https://github.com/easytocloud/sso-tools/compare/v0.6.3...v0.6.4) (2024-09-27)
+
+
+### Bug Fixes
+
+* protect top level .envrc when no --overwrite-envrc is specified ([d755b99](https://github.com/easytocloud/sso-tools/commit/d755b99662682177601fcdfb7c105ec236cfeffc))
+
 ## [0.6.3](https://github.com/easytocloud/sso-tools/compare/v0.6.2...v0.6.3) (2024-09-27)
 
 

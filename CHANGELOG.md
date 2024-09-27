@@ -1,3 +1,10 @@
+## [0.6.2](https://github.com/easytocloud/sso-tools/compare/v0.6.1...v0.6.2) (2024-09-27)
+
+
+### Bug Fixes
+
+* explain use of .generate-sso-config ([c934d07](https://github.com/easytocloud/sso-tools/commit/c934d075ce33bc06ad43f4877d6d47b78c79d23a))
+
 ## [0.6.1](https://github.com/easytocloud/sso-tools/compare/v0.6.0...v0.6.1) (2024-09-17)
 
 

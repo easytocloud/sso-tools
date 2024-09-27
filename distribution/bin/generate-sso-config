@@ -76,6 +76,7 @@ determine_config_file() {
 # Function to create SSO organization .envrc file
 create_sso_org_envrc() {
     local sso_name=$1
+    local overwrite_envrc=$2
     local sso_org_dir
 
     if [[ -n "$sso_name" ]] && [[ "$sso_name" != "/" ]]; then
@@ -86,20 +87,24 @@ create_sso_org_envrc() {
 
     mkdir -p "$sso_org_dir"
     local config_dir=$(dirname "$CONFIG_FILE_TO_WRITE")
+    local envrc_file="${sso_org_dir}/.envrc"
     
-    cat << EOF > "${sso_org_dir}/.envrc"
+    if [[ ! -f "$envrc_file" ]] || $overwrite_envrc; then
+        cat << EOF > "$envrc_file"
 export AWS_CONFIG_FILE=${config_dir}/config
 export AWS_SHARED_CREDENTIALS_FILE=${config_dir}/credentials
 EOF
-    
-    log "Created SSO organization .envrc file at ${sso_org_dir}/.envrc"
-    
-    # Allow the top-level .envrc file
-    (
-        cd "${sso_org_dir}" || exit
-        direnv allow
-    )
-    log "Allowed top-level .envrc file with direnv"
+        log "Created/Updated SSO organization .envrc file at ${envrc_file}"
+        
+        # Allow the top-level .envrc file
+        (
+            cd "${sso_org_dir}" || exit
+            direnv allow
+        )
+        log "Allowed top-level .envrc file with direnv"
+    else
+        log "Skipped existing top-level .envrc file at ${envrc_file}"
+    fi
 }
 
 # Function to ensure AWS config file exists
@@ -273,7 +278,7 @@ generate_aws_config() {
     temp_file=$(mktemp)
 
     # Create SSO organization .envrc file
-    create_sso_org_envrc "$sso_name"
+    create_sso_org_envrc "$sso_name" "$overwrite_envrc"
 
     # Copy existing config without generated part
     sed '/^# >>> BEGIN/,/^# >>> END/d' "$CONFIG_FILE_TO_WRITE" > "$temp_file"

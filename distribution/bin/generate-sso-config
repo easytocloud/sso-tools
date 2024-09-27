@@ -27,6 +27,7 @@ help() {
     echo "  --skip-sso-name             Do not use the SSO name in the path"
     echo "  --unified-root PATH         Use a different root directory for the unified environment"
     echo "  --default-profile-region REGION Set the region for the generated profiles"
+    echo "  --overwrite-envrc           Overwrite existing .envrc files (default: leave existing files untouched)"
     echo "  --help                      Display this help message and exit"
 }
 
@@ -213,6 +214,7 @@ create_envrc_file_and_run_cclist() {
     local temp_file=$5
     local account_id=$6
     local use_ou_structure=$7
+    local overwrite_envrc=$8
     local account_dir
     local unified_dir
 
@@ -233,13 +235,18 @@ create_envrc_file_and_run_cclist() {
     mkdir -p "${account_dir}"
     mkdir -p "${account_dir}/scratch"
 
-    cat << EOF > "${account_dir}/.envrc"
+    local envrc_file="${account_dir}/.envrc"
+    if [[ ! -f "$envrc_file" ]] || $overwrite_envrc; then
+        cat << EOF > "$envrc_file"
 source_up
 export AWS_PROFILE=${profile_name}
 export AWS_DEFAULT_REGION=${DEFAULT_SSO_REGION}
 EOF
+        log "Created/Updated .envrc file for ${account_dir}"
+    else
+        log "Skipped existing .envrc file for ${account_dir}"
+    fi
 
-    log "Created .envrc file for ${account_dir}"
     log "Created scratch directory: ${account_dir}/scratch"
 
     if $create_repos_md; then
@@ -261,6 +268,7 @@ generate_aws_config() {
     local sso_name=$4
     local create_repos_md=$5
     local use_ou_structure=$6
+    local overwrite_envrc=$7
     local temp_file
     temp_file=$(mktemp)
 
@@ -295,7 +303,7 @@ generate_aws_config() {
                 
                 # Create .envrc file for the first role or the specified developer role if --create-directories is set
                 if $create_directories && { $first_role && [ -z "$developer_role_name" ]; } || [ "$rolename" = "$developer_role_name" ]; then
-                    create_envrc_file_and_run_cclist "$sso_name" "$name" "$profile_name" "$create_repos_md" "$temp_file" "$id" "$use_ou_structure"
+                    create_envrc_file_and_run_cclist "$sso_name" "$name" "$profile_name" "$create_repos_md" "$temp_file" "$id" "$use_ou_structure" "$overwrite_envrc"
                     first_role=false
                 fi
             done
@@ -374,6 +382,7 @@ save_parameters() {
         echo "USE_OU_STRUCTURE=$USE_OU_STRUCTURE"
         echo "UNIFIED_ROOT=$UNIFIED_ROOT"
         echo "DEFAULT_PROFILE_REGION=$DEFAULT_PROFILE_REGION"
+        echo "OVERWRITE_ENVRC=$OVERWRITE_ENVRC"
     } > "$config_file"
     log "Saved parameters to $config_file"
 }
@@ -398,6 +407,7 @@ parse_arguments() {
     DEVELOPER_ROLE_NAME=""
     SSO_NAME="${SSO_NAME:-}"
     USE_OU_STRUCTURE="${USE_OU_STRUCTURE:-false}"
+    OVERWRITE_ENVRC=false
 
     # If no arguments are provided, try to read from the config file
     if [[ $# -eq 0 ]]; then
@@ -445,6 +455,10 @@ parse_arguments() {
                 DEFAULT_PROFILE_REGION="$2"
                 shift 2
                 ;;
+            --overwrite-envrc)
+                OVERWRITE_ENVRC=true
+                shift
+                ;;
             --help)
                 help
                 exit 0
@@ -477,7 +491,7 @@ main() {
 
     sso_login
     token=$(get_access_token)
-    generate_aws_config "$token" "$DEVELOPER_ROLE_NAME" "$CREATE_DIRECTORIES" "$SSO_NAME" "$CREATE_REPOS_MD" "$USE_OU_STRUCTURE"
+    generate_aws_config "$token" "$DEVELOPER_ROLE_NAME" "$CREATE_DIRECTORIES" "$SSO_NAME" "$CREATE_REPOS_MD" "$USE_OU_STRUCTURE" "$OVERWRITE_ENVRC"
 
     # Save the parameters after successful execution
     save_parameters

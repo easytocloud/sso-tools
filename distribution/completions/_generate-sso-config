@@ -10,6 +10,8 @@ _generate-sso-config() {
     '--create-repos-md[Run cclist --create-repos-md for each account directory]'
     '--skip-sso-name[Do not use the SSO name in the path]'
     '--unified-root[Use a different root directory for the unified environment]:path:'
+    '--default-profile-region[Set the region for the generated profiles]:region:'
+    '--overwrite-envrc[Overwrite existing .envrc files]'
     '--help[Display help message and exit]'
   )
 

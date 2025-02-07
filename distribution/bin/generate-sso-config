@@ -182,7 +182,7 @@ configure_sso_session() {
 sso_login() {
     if aws sso login --sso-session sso; then
         log "Started SSO session"
-        log "Patience please while $CONFIG_FILE_TO_WRITE is completed - this might take a few minutes"
+        log "This process will take several minutes due to AWS Organizations API rate limits (2 requests/second)"
     else
         log "SSO login failed"
         exit 1
@@ -352,14 +352,12 @@ generate_aws_config() {
             done < <(jq -r '.roleList[].roleName' "${temp_roles_dir}/${id}_roles.json")
         done
 
-        # Second pass: Create directories in parallel batches
+        # Create directories sequentially to maximize cache benefits
         if $create_directories && [ -f "${temp_roles_dir}/dirs_to_create.txt" ]; then
-            log "Creating directories in parallel batches..."
+            log "Creating directories (this may take a few minutes due to AWS Organizations API rate limits)..."
             local total_dirs=$(wc -l < "${temp_roles_dir}/dirs_to_create.txt")
             local processed=0
-            local batch_size=10
 
-            # Process directories sequentially to avoid file handle issues
             while IFS='|' read -r sso_name_val name profile_name id rolename; do
                 # Get OU path (will use cache if available)
                 local ou_path=""

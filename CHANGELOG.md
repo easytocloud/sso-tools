@@ -1,3 +1,10 @@
+## [0.7.5](https://github.com/easytocloud/sso-tools/compare/v0.7.4...v0.7.5) (2025-02-07)
+
+
+### Bug Fixes
+
+* mention reason for slow performance ([e1d3624](https://github.com/easytocloud/sso-tools/commit/e1d3624d678473ef5bc6a081c560c7e1ad824204))
+
 ## [0.7.4](https://github.com/easytocloud/sso-tools/compare/v0.7.3...v0.7.4) (2025-02-07)
 
 

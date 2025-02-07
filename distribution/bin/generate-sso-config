@@ -369,61 +369,51 @@ generate_aws_config() {
             local processed=0
             local batch_size=10
 
-            while IFS= read -r -d $'\n' batch; do
-                local pids=()
+            # Process directories sequentially to avoid file handle issues
+            while IFS='|' read -r sso_name_val name profile_name id rolename; do
+                # Use pre-fetched OU path if available
+                local ou_path=""
+                if $use_ou_structure; then
+                    ou_path="${ou_paths[$id]}"
+                fi
                 
-                echo "$batch" | while IFS= read -r line; do
-                    IFS='|' read -r sso_name_val name profile_name id rolename <<< "$line"
-                    {
-                        # Use pre-fetched OU path if available
-                        local ou_path=""
-                        if $use_ou_structure; then
-                            ou_path="${ou_paths[$id]}"
-                        fi
-                        
-                        if [[ -n "$sso_name_val" ]] && [[ "$sso_name_val" != "/" ]]; then
-                            unified_dir="${UNIFIED_ROOT}/${sso_name_val}"
-                        else
-                            unified_dir="${UNIFIED_ROOT}"
-                        fi
-                        
-                        if $use_ou_structure; then
-                            account_dir="${unified_dir}${ou_path}/${name}"
-                        else
-                            account_dir="${unified_dir}/${name}"
-                        fi
-                        
-                        mkdir -p "${account_dir}"
-                        mkdir -p "${account_dir}/scratch"
+                if [[ -n "$sso_name_val" ]] && [[ "$sso_name_val" != "/" ]]; then
+                    unified_dir="${UNIFIED_ROOT}/${sso_name_val}"
+                else
+                    unified_dir="${UNIFIED_ROOT}"
+                fi
+                
+                if $use_ou_structure; then
+                    account_dir="${unified_dir}${ou_path}/${name}"
+                else
+                    account_dir="${unified_dir}/${name}"
+                fi
+                
+                mkdir -p "${account_dir}"
+                mkdir -p "${account_dir}/scratch"
 
-                        if [[ ! -f "${account_dir}/.envrc" ]] || $overwrite_envrc; then
-                            cat << EOF > "${account_dir}/.envrc"
+                if [[ ! -f "${account_dir}/.envrc" ]] || $overwrite_envrc; then
+                    cat << EOF > "${account_dir}/.envrc"
 source_up
 export AWS_PROFILE=${profile_name}
 export AWS_DEFAULT_REGION=${DEFAULT_SSO_REGION}
 EOF
-                            (
-                                cd "${account_dir}" || exit
-                                direnv allow
-                                if $create_repos_md; then
-                                    export AWS_CONFIG_FILE=$temp_file
-                                    cclist --create-repos-md
-                                fi
-                            )
+                    (
+                        cd "${account_dir}" || exit
+                        direnv allow
+                        if $create_repos_md; then
+                            export AWS_CONFIG_FILE=$temp_file
+                            cclist --create-repos-md
                         fi
-                    } &
-                    pids+=($!)
-                done < <(echo "$batch")
+                    )
+                fi
                 
-                # Wait for current batch to complete
-                for pid in "${pids[@]}"; do
-                    wait "$pid"
-                done
+                processed=$((processed + 1))
+                if ((processed % 10 == 0)); then
+                    log "Created directories for $processed of $total_dirs accounts"
+                fi
                 
-                processed=$((processed + $(echo "$batch" | wc -l)))
-                log "Created directories for $processed of $total_dirs accounts"
-                
-            done < <(split -l $batch_size "${temp_roles_dir}/dirs_to_create.txt" "${temp_roles_dir}/batch-" && ls "${temp_roles_dir}/batch-"* | while read -r batchfile; do cat "$batchfile"; rm "$batchfile"; done)
+            done < "${temp_roles_dir}/dirs_to_create.txt"
             
             log "Completed directory creation"
         fi

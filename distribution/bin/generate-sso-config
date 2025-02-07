@@ -320,6 +320,50 @@ generate_aws_config() {
     mv "$temp_file" "$CONFIG_FILE_TO_WRITE"
 }
 
+# Cache variables for OU path lookups
+declare -A PARENT_CACHE
+declare -A OU_NAME_CACHE
+
+# Function to get parent info with caching
+get_parent_info() {
+    local child_id="$1"
+    
+    if [[ -n "${PARENT_CACHE[$child_id]:-}" ]]; then
+        echo "${PARENT_CACHE[$child_id]}"
+        return 0
+    fi
+    
+    local parent_info
+    parent_info=$(aws organizations list-parents --child-id "$child_id" --output json 2>/dev/null)
+    if [ $? -eq 0 ]; then
+        PARENT_CACHE[$child_id]="$parent_info"
+        echo "$parent_info"
+        return 0
+    fi
+    return 1
+}
+
+# Function to get OU name with caching
+get_ou_name() {
+    local ou_id="$1"
+    
+    if [[ -n "${OU_NAME_CACHE[$ou_id]:-}" ]]; then
+        echo "${OU_NAME_CACHE[$ou_id]}"
+        return 0
+    fi
+    
+    local ou_info
+    ou_info=$(aws organizations describe-organizational-unit --organizational-unit-id "$ou_id" --output json 2>/dev/null)
+    if [ $? -eq 0 ]; then
+        local ou_name
+        ou_name=$(echo "$ou_info" | jq -r '.OrganizationalUnit.Name')
+        OU_NAME_CACHE[$ou_id]="$ou_name"
+        echo "$ou_name"
+        return 0
+    fi
+    return 1
+}
+
 find_ou_path() {
     local account_id="$1"
     local path=""
@@ -327,19 +371,15 @@ find_ou_path() {
     local is_account=true
 
     while true; do
-        if $is_account; then
-            # Get the parent of the account
-            parent_info=$(aws organizations list-parents --child-id "$current_id" --output json 2>/dev/null)
-        else
-            # Get the parent of the OU
-            parent_info=$(aws organizations list-parents --child-id "$current_id" --output json 2>/dev/null)
-        fi
-
+        local parent_info
+        parent_info=$(get_parent_info "$current_id")
         if [ $? -ne 0 ]; then
             echo "Error: Failed to retrieve parent information for $current_id" >&2
             return 1
         fi
 
+        local parent_id
+        local parent_type
         parent_id=$(echo "$parent_info" | jq -r '.Parents[0].Id')
         parent_type=$(echo "$parent_info" | jq -r '.Parents[0].Type')
 
@@ -348,13 +388,13 @@ find_ou_path() {
             path="$path"
             break
         elif [ "$parent_type" == "ORGANIZATIONAL_UNIT" ]; then
-            # Get the OU name
-            ou_info=$(aws organizations describe-organizational-unit --organizational-unit-id "$parent_id" --output json 2>/dev/null)
+            # Get the OU name with caching
+            local ou_name
+            ou_name=$(get_ou_name "$parent_id")
             if [ $? -ne 0 ]; then
                 echo "Error: Failed to retrieve OU information for $parent_id" >&2
                 return 1
             fi
-            ou_name=$(echo "$ou_info" | jq -r '.OrganizationalUnit.Name')
             path="/$ou_name$path"
         else
             echo "Error: Unexpected parent type: $parent_type" >&2

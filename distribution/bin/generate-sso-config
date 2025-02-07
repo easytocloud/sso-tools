@@ -287,16 +287,54 @@ generate_aws_config() {
         local profile_for_envrc
 
         echo "# >>> BEGIN GENERATED CONFIG | $(date) | for ${sso_name} | on $(hostname) <<<"
-        aws sso list-accounts --access-token "$token" | tee |
-        jq -r '.accountList[] | (.accountId, .accountName)' | 
-        sed 'N;s/\n/ /' | 
-        while read -r id name; do
-            # echo -n "." >&2
-            name=$(echo "$name" | tr ' )()' '___')
+        
+        # Get all accounts in one call
+        local accounts_json
+        accounts_json=$(aws sso list-accounts --access-token "$token" --output json)
+        local account_ids=($(echo "$accounts_json" | jq -r '.accountList[].accountId'))
+        local account_names=($(echo "$accounts_json" | jq -r '.accountList[].accountName | gsub("[ )(]"; "_")'))
+        
+        # Create temp directory for role files
+        local temp_roles_dir=$(mktemp -d)
+        
+        # Process accounts in batches of 10
+        local batch_size=10
+        local total_accounts=${#account_ids[@]}
+        local processed=0
+        
+        while [ $processed -lt $total_accounts ]; do
+            local pids=()
+            local batch_end=$((processed + batch_size))
+            [ $batch_end -gt $total_accounts ] && batch_end=$total_accounts
+            
+            # Process a batch of accounts
+            for i in $(seq $processed $((batch_end-1))); do
+                {
+                    local id="${account_ids[$i]}"
+                    local roles_json
+                    roles_json=$(aws sso list-account-roles --access-token "$token" --account-id "$id" --output json)
+                    echo "$roles_json" > "${temp_roles_dir}/${id}_roles.json"
+                } &
+                pids+=($!)
+            done
+            
+            # Wait for current batch to complete
+            for pid in "${pids[@]}"; do
+                wait "$pid"
+            done
+            
+            processed=$batch_end
+            log "Processed $processed of $total_accounts accounts"
+        done
+        
+        # Process the results
+        for i in "${!account_ids[@]}"; do
+            local id="${account_ids[$i]}"
+            local name="${account_names[$i]}"
             local first_role=true
-            aws sso list-account-roles --access-token "$token" --account-id "$id" | tee |
-            jq -r '.roleList[].roleName' | 
-            while read -r rolename; do
+            
+            # Read roles from temp file
+            while IFS= read -r rolename; do
                 rolename=$(echo "$rolename" | tr ' ' '_')
                 profile_name="${rolename}@${name}"
                 echo
@@ -311,8 +349,11 @@ generate_aws_config() {
                     create_envrc_file_and_run_cclist "$sso_name" "$name" "$profile_name" "$create_repos_md" "$temp_file" "$id" "$use_ou_structure" "$overwrite_envrc"
                     first_role=false
                 fi
-            done
+            done < <(jq -r '.roleList[].roleName' "${temp_roles_dir}/${id}_roles.json")
         done
+        
+        # Cleanup temp directory
+        rm -rf "$temp_roles_dir"
         echo "# >>> END GENERATED CONFIG <<<"
         echo ""
     } >> "$temp_file"

@@ -36,7 +36,7 @@ log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" >&2
 }
 
-## Function to check if running in Cloud9 - if so, set UNIFIED_ROOT to ~/environment and skip SSO_NAME
+## Function to check if running in Cloud9 or CloudX - if so, set UNIFIED_ROOT to ~/environment and skip SSO_NAME
 check_cloud9(){
     # if username is ec2-user and a directory environment exists in the users home directory, use that as the UNIFIED_ROOT
     if [[ $(whoami) == "ec2-user" ]]; then

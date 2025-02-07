@@ -460,111 +460,71 @@ get_ou_name() {
     return 1
 }
 
-# Function to check if we have a cached path for an OU
-get_cached_path() {
-    local current_id="$1"
-    local current_path="$2"
-    
-    # Try to find the longest cached path that matches our current path
-    local longest_match=""
-    local matched_id=""
-    
-    for cached_id in "${!PATH_CACHE[@]}"; do
-        local cached_path="${PATH_CACHE[$cached_id]}"
-        if [[ "$current_path" == "$cached_path"* ]] && [[ ${#cached_path} -gt ${#longest_match} ]]; then
-            longest_match="$cached_path"
-            matched_id="$cached_id"
-        fi
-    done
-    
-    if [[ -n "$matched_id" ]]; then
-        # Get the remaining path from the matched OU to our target
-        local remaining_path=""
-        local temp_id="$current_id"
-        
-        while [[ "$temp_id" != "$matched_id" ]]; do
-            local parent_info
-            parent_info=$(get_parent_info "$temp_id")
-            if [ $? -ne 0 ]; then
-                return 1
-            fi
-            
-            local parent_id
-            local parent_type
-            parent_id=$(echo "$parent_info" | jq -r '.Parents[0].Id')
-            parent_type=$(echo "$parent_info" | jq -r '.Parents[0].Type')
-            
-            if [[ "$parent_type" == "ORGANIZATIONAL_UNIT" ]]; then
-                local ou_name
-                ou_name=$(get_ou_name "$parent_id")
-                if [ $? -ne 0 ]; then
-                    return 1
-                fi
-                remaining_path="/$ou_name$remaining_path"
-            fi
-            
-            temp_id="$parent_id"
-        done
-        
-        echo "${longest_match}${remaining_path}"
-        return 0
-    fi
-    
-    return 1
-}
-
 find_ou_path() {
     local account_id="$1"
-    local path=""
     local current_id="$account_id"
-    local is_account=true
     
-    # First try to get a cached path
-    local cached_result
-    cached_result=$(get_cached_path "$current_id" "$path")
-    if [ $? -eq 0 ]; then
-        echo "$cached_result"
+    # Check if we've seen this ID before
+    if [[ -n "${PATH_CACHE[$current_id]:-}" ]]; then
+        echo "${PATH_CACHE[$current_id]}"
         return 0
     fi
-
+    
+    # Build list of IDs from account to root
+    local id_chain=()
+    local path_segments=()
+    
     while true; do
+        # Check if we've seen this node before
+        if [[ -n "${PATH_CACHE[$current_id]:-}" ]]; then
+            local cached_path="${PATH_CACHE[$current_id]}"
+            # Cache the path for all IDs we've seen
+            local full_path="$cached_path"
+            for ((i=${#path_segments[@]}-1; i>=0; i--)); do
+                full_path="${path_segments[$i]}$full_path"
+                PATH_CACHE["${id_chain[$i]}"]="$full_path"
+            done
+            echo "$full_path"
+            return 0
+        fi
+        
         local parent_info
         parent_info=$(get_parent_info "$current_id")
         if [ $? -ne 0 ]; then
             echo "Error: Failed to retrieve parent information for $current_id" >&2
             return 1
         fi
-
+        
         local parent_id
         local parent_type
         parent_id=$(echo "$parent_info" | jq -r '.Parents[0].Id')
         parent_type=$(echo "$parent_info" | jq -r '.Parents[0].Type')
-
+        
         if [ "$parent_type" == "ROOT" ]; then
-            # We've reached the root, cache the path and break
-            PATH_CACHE[$current_id]="$path"
-            break
+            # We've reached the root, build and cache the full path
+            local full_path=""
+            for ((i=${#path_segments[@]}-1; i>=0; i--)); do
+                full_path="${path_segments[$i]}$full_path"
+                PATH_CACHE["${id_chain[$i]}"]="$full_path"
+            done
+            echo "$full_path"
+            return 0
         elif [ "$parent_type" == "ORGANIZATIONAL_UNIT" ]; then
-            # Get the OU name with caching
             local ou_name
             ou_name=$(get_ou_name "$parent_id")
             if [ $? -ne 0 ]; then
                 echo "Error: Failed to retrieve OU information for $parent_id" >&2
                 return 1
             fi
-            path="/$ou_name$path"
-            # Cache the partial path
-            PATH_CACHE[$current_id]="$path"
+            id_chain+=("$current_id")
+            path_segments+=("/$ou_name")
         else
             echo "Error: Unexpected parent type: $parent_type" >&2
             return 1
         fi
-
+        
         current_id="$parent_id"
-        is_account=false
     done
-
-    echo "$path"
 }
 
 # Function to save parameters to .generate-sso-config file

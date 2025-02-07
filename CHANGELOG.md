@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/easytocloud/sso-tools/compare/v0.6.5...v0.7.0) (2025-02-07)
+
+
+### Features
+
+* run multiple ops in parallel ([6519b34](https://github.com/easytocloud/sso-tools/commit/6519b3452cce931101b01be9b6ac92f9e255578b))
+
 ## [0.6.5](https://github.com/easytocloud/sso-tools/compare/v0.6.4...v0.6.5) (2025-02-07)
 
 

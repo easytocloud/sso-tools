@@ -1,3 +1,10 @@
+## [0.7.3](https://github.com/easytocloud/sso-tools/compare/v0.7.2...v0.7.3) (2025-02-07)
+
+
+### Bug Fixes
+
+* improved .aws/config generation ([818d858](https://github.com/easytocloud/sso-tools/commit/818d8587babfc808336ab8a948e6d113980684f2))
+
 ## [0.7.2](https://github.com/easytocloud/sso-tools/compare/v0.7.1...v0.7.2) (2025-02-07)
 
 

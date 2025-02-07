@@ -440,6 +440,7 @@ EOF
 # Cache variables for OU path lookups
 declare -A PARENT_CACHE
 declare -A OU_NAME_CACHE
+declare -A PATH_CACHE
 
 # Function to get parent info with caching
 get_parent_info() {
@@ -481,11 +482,72 @@ get_ou_name() {
     return 1
 }
 
+# Function to check if we have a cached path for an OU
+get_cached_path() {
+    local current_id="$1"
+    local current_path="$2"
+    
+    # Try to find the longest cached path that matches our current path
+    local longest_match=""
+    local matched_id=""
+    
+    for cached_id in "${!PATH_CACHE[@]}"; do
+        local cached_path="${PATH_CACHE[$cached_id]}"
+        if [[ "$current_path" == "$cached_path"* ]] && [[ ${#cached_path} -gt ${#longest_match} ]]; then
+            longest_match="$cached_path"
+            matched_id="$cached_id"
+        fi
+    done
+    
+    if [[ -n "$matched_id" ]]; then
+        # Get the remaining path from the matched OU to our target
+        local remaining_path=""
+        local temp_id="$current_id"
+        
+        while [[ "$temp_id" != "$matched_id" ]]; do
+            local parent_info
+            parent_info=$(get_parent_info "$temp_id")
+            if [ $? -ne 0 ]; then
+                return 1
+            fi
+            
+            local parent_id
+            local parent_type
+            parent_id=$(echo "$parent_info" | jq -r '.Parents[0].Id')
+            parent_type=$(echo "$parent_info" | jq -r '.Parents[0].Type')
+            
+            if [[ "$parent_type" == "ORGANIZATIONAL_UNIT" ]]; then
+                local ou_name
+                ou_name=$(get_ou_name "$parent_id")
+                if [ $? -ne 0 ]; then
+                    return 1
+                fi
+                remaining_path="/$ou_name$remaining_path"
+            fi
+            
+            temp_id="$parent_id"
+        done
+        
+        echo "${longest_match}${remaining_path}"
+        return 0
+    fi
+    
+    return 1
+}
+
 find_ou_path() {
     local account_id="$1"
     local path=""
     local current_id="$account_id"
     local is_account=true
+    
+    # First try to get a cached path
+    local cached_result
+    cached_result=$(get_cached_path "$current_id" "$path")
+    if [ $? -eq 0 ]; then
+        echo "$cached_result"
+        return 0
+    fi
 
     while true; do
         local parent_info
@@ -501,8 +563,8 @@ find_ou_path() {
         parent_type=$(echo "$parent_info" | jq -r '.Parents[0].Type')
 
         if [ "$parent_type" == "ROOT" ]; then
-            # We've reached the root, prepend it to the path and break
-            path="$path"
+            # We've reached the root, cache the path and break
+            PATH_CACHE[$current_id]="$path"
             break
         elif [ "$parent_type" == "ORGANIZATIONAL_UNIT" ]; then
             # Get the OU name with caching
@@ -513,6 +575,8 @@ find_ou_path() {
                 return 1
             fi
             path="/$ou_name$path"
+            # Cache the partial path
+            PATH_CACHE[$current_id]="$path"
         else
             echo "Error: Unexpected parent type: $parent_type" >&2
             return 1

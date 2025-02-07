@@ -327,17 +327,7 @@ generate_aws_config() {
             log "Processed $processed of $total_accounts accounts"
         done
         
-        # Pre-fetch all OU paths if using OU structure
-        declare -A ou_paths
-        if $use_ou_structure; then
-            log "Pre-fetching OU paths for all accounts..."
-            for id in "${account_ids[@]}"; do
-                ou_paths[$id]=$(find_ou_path "$id")
-            done
-            log "Completed pre-fetching OU paths"
-        fi
-
-        # First pass: Generate config file content
+        # Generate config file content
         for i in "${!account_ids[@]}"; do
             local id="${account_ids[$i]}"
             local name="${account_names[$i]}"
@@ -371,10 +361,10 @@ generate_aws_config() {
 
             # Process directories sequentially to avoid file handle issues
             while IFS='|' read -r sso_name_val name profile_name id rolename; do
-                # Use pre-fetched OU path if available
+                # Get OU path (will use cache if available)
                 local ou_path=""
                 if $use_ou_structure; then
-                    ou_path="${ou_paths[$id]}"
+                    ou_path=$(find_ou_path "$id")
                 fi
                 
                 if [[ -n "$sso_name_val" ]] && [[ "$sso_name_val" != "/" ]]; then

@@ -1,3 +1,10 @@
+## [0.7.1](https://github.com/easytocloud/sso-tools/compare/v0.7.0...v0.7.1) (2025-02-07)
+
+
+### Bug Fixes
+
+* run dir. creates in parallel ([57471dd](https://github.com/easytocloud/sso-tools/commit/57471dd5f33ee18bea6427f9544b1aa0192e0d5f))
+
 # [0.7.0](https://github.com/easytocloud/sso-tools/compare/v0.6.5...v0.7.0) (2025-02-07)
 
 

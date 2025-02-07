@@ -1,3 +1,10 @@
+## [0.7.2](https://github.com/easytocloud/sso-tools/compare/v0.7.1...v0.7.2) (2025-02-07)
+
+
+### Bug Fixes
+
+* improved prefetch ([744ea75](https://github.com/easytocloud/sso-tools/commit/744ea75a9a2eed45b9fb24b97e5fb7af4e76c771))
+
 ## [0.7.1](https://github.com/easytocloud/sso-tools/compare/v0.7.0...v0.7.1) (2025-02-07)
 
 

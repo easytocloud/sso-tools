@@ -1,3 +1,10 @@
+## [0.7.6](https://github.com/easytocloud/sso-tools/compare/v0.7.5...v0.7.6) (2025-02-07)
+
+
+### Bug Fixes
+
+* last cache fix ([f252fee](https://github.com/easytocloud/sso-tools/commit/f252feef336d2bf245f5b04acc983480ff76ba50))
+
 ## [0.7.5](https://github.com/easytocloud/sso-tools/compare/v0.7.4...v0.7.5) (2025-02-07)
 
 

@@ -327,7 +327,17 @@ generate_aws_config() {
             log "Processed $processed of $total_accounts accounts"
         done
         
-        # Process the results
+        # Pre-fetch all OU paths if using OU structure
+        declare -A ou_paths
+        if $use_ou_structure; then
+            log "Pre-fetching OU paths for all accounts..."
+            for id in "${account_ids[@]}"; do
+                ou_paths[$id]=$(find_ou_path "$id")
+            done
+            log "Completed pre-fetching OU paths"
+        fi
+
+        # First pass: Generate config file content
         for i in "${!account_ids[@]}"; do
             local id="${account_ids[$i]}"
             local name="${account_names[$i]}"
@@ -344,13 +354,79 @@ generate_aws_config() {
                 echo "sso_role_name = ${rolename}"
                 echo "region = ${DEFAULT_PROFILE_REGION}"
                 
-                # Create .envrc file for the first role or the specified developer role if --create-directories is set
                 if $create_directories && { $first_role && [ -z "$developer_role_name" ]; } || [ "$rolename" = "$developer_role_name" ]; then
-                    create_envrc_file_and_run_cclist "$sso_name" "$name" "$profile_name" "$create_repos_md" "$temp_file" "$id" "$use_ou_structure" "$overwrite_envrc"
+                    # Store the information for later directory creation
+                    echo "${sso_name}|${name}|${profile_name}|${id}|${rolename}" >> "${temp_roles_dir}/dirs_to_create.txt"
                     first_role=false
                 fi
             done < <(jq -r '.roleList[].roleName' "${temp_roles_dir}/${id}_roles.json")
         done
+
+        # Second pass: Create directories in parallel batches
+        if $create_directories && [ -f "${temp_roles_dir}/dirs_to_create.txt" ]; then
+            log "Creating directories in parallel batches..."
+            local total_dirs=$(wc -l < "${temp_roles_dir}/dirs_to_create.txt")
+            local processed=0
+            local batch_size=10
+
+            while IFS= read -r -d $'\n' batch; do
+                local pids=()
+                
+                echo "$batch" | while IFS= read -r line; do
+                    IFS='|' read -r sso_name_val name profile_name id rolename <<< "$line"
+                    {
+                        # Use pre-fetched OU path if available
+                        local ou_path=""
+                        if $use_ou_structure; then
+                            ou_path="${ou_paths[$id]}"
+                        fi
+                        
+                        if [[ -n "$sso_name_val" ]] && [[ "$sso_name_val" != "/" ]]; then
+                            unified_dir="${UNIFIED_ROOT}/${sso_name_val}"
+                        else
+                            unified_dir="${UNIFIED_ROOT}"
+                        fi
+                        
+                        if $use_ou_structure; then
+                            account_dir="${unified_dir}${ou_path}/${name}"
+                        else
+                            account_dir="${unified_dir}/${name}"
+                        fi
+                        
+                        mkdir -p "${account_dir}"
+                        mkdir -p "${account_dir}/scratch"
+
+                        if [[ ! -f "${account_dir}/.envrc" ]] || $overwrite_envrc; then
+                            cat << EOF > "${account_dir}/.envrc"
+source_up
+export AWS_PROFILE=${profile_name}
+export AWS_DEFAULT_REGION=${DEFAULT_SSO_REGION}
+EOF
+                            (
+                                cd "${account_dir}" || exit
+                                direnv allow
+                                if $create_repos_md; then
+                                    export AWS_CONFIG_FILE=$temp_file
+                                    cclist --create-repos-md
+                                fi
+                            )
+                        fi
+                    } &
+                    pids+=($!)
+                done < <(echo "$batch")
+                
+                # Wait for current batch to complete
+                for pid in "${pids[@]}"; do
+                    wait "$pid"
+                done
+                
+                processed=$((processed + $(echo "$batch" | wc -l)))
+                log "Created directories for $processed of $total_dirs accounts"
+                
+            done < <(split -l $batch_size "${temp_roles_dir}/dirs_to_create.txt" "${temp_roles_dir}/batch-" && ls "${temp_roles_dir}/batch-"* | while read -r batchfile; do cat "$batchfile"; rm "$batchfile"; done)
+            
+            log "Completed directory creation"
+        fi
         
         # Cleanup temp directory
         rm -rf "$temp_roles_dir"

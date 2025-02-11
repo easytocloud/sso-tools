@@ -1,3 +1,10 @@
+## [0.7.7](https://github.com/easytocloud/sso-tools/compare/v0.7.6...v0.7.7) (2025-02-11)
+
+
+### Bug Fixes
+
+* set batch size to 5 and default role to AdministratorAccess ([0092a08](https://github.com/easytocloud/sso-tools/commit/0092a084c9566dc77f0e46a0dbcdc1039b0dda57))
+
 ## [0.7.6](https://github.com/easytocloud/sso-tools/compare/v0.7.5...v0.7.6) (2025-02-07)
 
 

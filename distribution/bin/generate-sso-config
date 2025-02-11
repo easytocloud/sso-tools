@@ -297,8 +297,8 @@ generate_aws_config() {
         # Create temp directory for role files
         local temp_roles_dir=$(mktemp -d)
         
-        # Process accounts in batches of 10
-        local batch_size=10
+        # Process accounts in batches of 5
+        local batch_size=5
         local total_accounts=${#account_ids[@]}
         local processed=0
         
@@ -568,7 +568,7 @@ parse_arguments() {
     # Set default values
     CREATE_DIRECTORIES=false
     CREATE_REPOS_MD=false
-    DEVELOPER_ROLE_NAME=""
+    DEVELOPER_ROLE_NAME="AdministratorAccess"
     SSO_NAME="${SSO_NAME:-}"
     USE_OU_STRUCTURE="${USE_OU_STRUCTURE:-false}"
     OVERWRITE_ENVRC=false

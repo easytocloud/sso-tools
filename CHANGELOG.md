@@ -1,3 +1,10 @@
+# [0.8.0](https://github.com/easytocloud/sso-tools/compare/v0.7.7...v0.8.0) (2026-01-22)
+
+
+### Features
+
+* improved callback availability detection for --no-browser automation ([4522752](https://github.com/easytocloud/sso-tools/commit/4522752bbd761cbb2775631cb286ef7361b1f6a6))
+
 ## [0.7.7](https://github.com/easytocloud/sso-tools/compare/v0.7.6...v0.7.7) (2025-02-11)
 
 

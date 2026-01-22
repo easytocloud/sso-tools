@@ -19,6 +19,7 @@ help() {
     echo "Usage: generate-sso-config [OPTIONS]"
     echo
     echo "Options:"
+    echo "  --legacy                    Use this legacy bash implementation"
     echo "  --create-directories        Create a directory for each account the user can assume any role in"
     echo "  --use-ou-structure          Use the OU structure in the unified environment"
     echo "  --developer-role-name NAME  Create .envrc files for the specified role"
@@ -565,6 +566,42 @@ read_parameters() {
 
 # Function to parse command-line arguments
 parse_arguments() {
+    # Check if --legacy flag is present
+    local use_legacy=false
+    for arg in "$@"; do
+        if [[ "$arg" == "--legacy" ]]; then
+            use_legacy=true
+            break
+        fi
+    done
+
+    # Show recommendation for new Python tool unless --legacy is specified
+    if [[ "$use_legacy" == "false" ]]; then
+        cat << 'EOF'
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║  📢 A new and improved Python version is available!                           ║
+║                                                                               ║
+║  The sso-config-generator offers better performance and more features.        ║
+║                                                                               ║
+║  Quick start:                                                                 ║
+║    uvx sso-config-generator --help                                            ║
+║                                                                               ║
+║  Or install with pip:                                                         ║
+║    pip install sso-config-generator                                           ║
+║    sso-config-generator --help                                                ║
+║                                                                               ║
+║  More info: https://github.com/easytocloud/sso-config-generator               ║
+║                                                                               ║
+║  To continue using this legacy bash version, use: --legacy                    ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+EOF
+        read -p "Press ENTER to continue with legacy version, or Ctrl+C to exit... " -r
+        echo
+    fi
+
     # Set default values
     CREATE_DIRECTORIES=false
     CREATE_REPOS_MD=false
@@ -583,6 +620,10 @@ parse_arguments() {
 
     while [[ $# -gt 0 ]]; do
         case $1 in
+            --legacy)
+                # Flag already handled above, just skip it
+                shift
+                ;;
             --developer-role-name)
                 DEVELOPER_ROLE_NAME="$2"
                 shift 2

@@ -1,3 +1,105 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
+# SSO login helper script
+# Intelligently handles VS Code environments and different SSO profiles
 
-aws sso login --sso-session sso 
+set -euo pipefail
+
+# Help function
+show_help() {
+    cat << 'EOF'
+Usage: ssostart [OPTIONS] [PROFILE]
+
+AWS SSO login helper that intelligently handles VS Code and terminal environments.
+
+OPTIONS:
+  --help              Show this help message
+  Any other options   Passed directly to 'aws sso login'
+
+PROFILE:
+  AWS profile name (default: cloudX)
+
+CONFIGURATION:
+  Default options can be set in ~/.ssostartrc (one option per line)
+  
+  Example ~/.ssostartrc:
+    --region eu-west-1
+    --debug
+
+ENVIRONMENT:
+  - VS Code environment: Uses browser-based authentication
+  - Terminal/SSH: Uses device code authentication (--no-browser --use-device-code)
+
+EXAMPLES:
+  ssostart                    # Login to cloudX profile
+  ssostart myprofile          # Login to myprofile
+  ssostart --debug            # Login with debug output
+  ssostart --region us-east-1 myprofile
+
+EOF
+    exit 0
+}
+
+# Check for help flag
+if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
+    show_help
+fi
+
+# Load default options from ~/.ssostartrc if it exists
+EXTRA_OPTS=()
+if [[ -f "$HOME/.ssostartrc" ]]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Skip empty lines and comments
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        EXTRA_OPTS+=("$line")
+    done < "$HOME/.ssostartrc"
+fi
+
+# Parse arguments
+PROFILE=""
+for arg in "$@"; do
+    # Check if argument looks like a profile (no leading -)
+    if [[ ! "$arg" =~ ^- ]]; then
+        PROFILE="$arg"
+    else
+        # It's an option, add to extra options
+        EXTRA_OPTS+=("$arg")
+    fi
+done
+
+# Default profile if not specified
+PROFILE="${PROFILE:-cloudX}"
+
+# Determine if browser authentication is possible
+# Browser auth works when:
+# 1. Running in VS Code (even if VS Code is connected to a remote server)
+# 2. Running in a local terminal (not SSH)
+# Browser auth does NOT work when:
+# - SSH session without VS Code
+is_vscode=false
+is_ssh=false
+
+# Check for VS Code environment
+if [[ -n "${VSCODE_IPC_HOOK_CLI:-}" ]] || [[ -n "${VSCODE_INJECTION:-}" ]] || [[ -n "${TERM_PROGRAM:-}" && "${TERM_PROGRAM}" == "vscode" ]]; then
+    is_vscode=true
+fi
+
+# Check if in SSH session
+# SSH sets SSH_CONNECTION and SSH_CLIENT variables
+if [[ -n "${SSH_CONNECTION:-}" ]] || [[ -n "${SSH_CLIENT:-}" ]] || [[ -n "${SSH_TTY:-}" ]]; then
+    is_ssh=true
+fi
+
+# Decide authentication method
+if [[ "$is_vscode" == "true" ]]; then
+    # VS Code environment - always use browser (VS Code handles the callback)
+    echo "Detected VS Code environment - using browser authentication"
+    exec aws sso login --profile "$PROFILE" "${EXTRA_OPTS[@]}"
+elif [[ "$is_ssh" == "false" ]]; then
+    # Local terminal (not SSH) - use browser
+    echo "Local terminal detected - using browser authentication"
+    exec aws sso login --profile "$PROFILE" "${EXTRA_OPTS[@]}"
+else
+    # SSH session without VS Code - use device code
+    echo "SSH session detected - using device code authentication"
+    exec aws sso login --profile "$PROFILE" --no-browser --use-device-code "${EXTRA_OPTS[@]}"
+fi

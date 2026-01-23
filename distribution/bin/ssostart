@@ -7,7 +7,7 @@ set -euo pipefail
 # Help function
 show_help() {
     cat << 'EOF'
-Usage: ssostart [OPTIONS] [PROFILE]
+Usage: ssostart [OPTIONS]
 
 AWS SSO login helper that intelligently handles VS Code and terminal environments.
 
@@ -15,12 +15,9 @@ OPTIONS:
   --help              Show this help message
   Any other options   Passed directly to 'aws sso login'
 
-PROFILE:
-  AWS profile name (default: cloudX)
-
 CONFIGURATION:
   Default options can be set in ~/.ssostartrc (one option per line)
-  
+
   Example ~/.ssostartrc:
     --region eu-west-1
     --debug
@@ -30,10 +27,9 @@ ENVIRONMENT:
   - Terminal/SSH: Uses device code authentication (--no-browser --use-device-code)
 
 EXAMPLES:
-  ssostart                    # Login to cloudX profile
-  ssostart myprofile          # Login to myprofile
-  ssostart --debug            # Login with debug output
-  ssostart --region us-east-1 myprofile
+  ssostart --profile myprofile          # Login to myprofile
+  ssostart --profile myprofile --debug  # Login with debug output
+  ssostart --region us-east-1 --profile myprofile
 
 EOF
     exit 0
@@ -54,20 +50,8 @@ if [[ -f "$HOME/.ssostartrc" ]]; then
     done < "$HOME/.ssostartrc"
 fi
 
-# Parse arguments
-PROFILE=""
-for arg in "$@"; do
-    # Check if argument looks like a profile (no leading -)
-    if [[ ! "$arg" =~ ^- ]]; then
-        PROFILE="$arg"
-    else
-        # It's an option, add to extra options
-        EXTRA_OPTS+=("$arg")
-    fi
-done
-
-# Default profile if not specified
-PROFILE="${PROFILE:-cloudX}"
+# Add all command line arguments to options
+EXTRA_OPTS+=("$@")
 
 # Determine if browser authentication is possible
 # Browser auth works when:
@@ -93,13 +77,13 @@ fi
 if [[ "$is_vscode" == "true" ]]; then
     # VS Code environment - always use browser (VS Code handles the callback)
     echo "Detected VS Code environment - using browser authentication"
-    exec aws sso login --profile "$PROFILE" "${EXTRA_OPTS[@]}"
+    exec aws sso login "${EXTRA_OPTS[@]}"
 elif [[ "$is_ssh" == "false" ]]; then
     # Local terminal (not SSH) - use browser
     echo "Local terminal detected - using browser authentication"
-    exec aws sso login --profile "$PROFILE" "${EXTRA_OPTS[@]}"
+    exec aws sso login "${EXTRA_OPTS[@]}"
 else
     # SSH session without VS Code - use device code
     echo "SSH session detected - using device code authentication"
-    exec aws sso login --profile "$PROFILE" --no-browser --use-device-code "${EXTRA_OPTS[@]}"
+    exec aws sso login --no-browser --use-device-code "${EXTRA_OPTS[@]}"
 fi

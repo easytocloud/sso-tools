@@ -1,3 +1,10 @@
+## [0.8.1](https://github.com/easytocloud/sso-tools/compare/v0.8.0...v0.8.1) (2026-01-23)
+
+
+### Bug Fixes
+
+* improved profile handling to take "default" as default ([6dc20ab](https://github.com/easytocloud/sso-tools/commit/6dc20ab112291eed6a5b765530c1f9c4c69c0c8e))
+
 # [0.8.0](https://github.com/easytocloud/sso-tools/compare/v0.7.7...v0.8.0) (2026-01-22)
 
 

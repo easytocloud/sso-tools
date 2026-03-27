@@ -7,9 +7,15 @@ set -euo pipefail
 # Help function
 show_help() {
     cat << 'EOF'
-Usage: ssostart [OPTIONS]
+Usage: ssostart [ENV] [OPTIONS]
 
 AWS SSO login helper that intelligently handles VS Code and terminal environments.
+
+ARGUMENTS:
+  ENV                 Optional AWS environment name from ~/.aws/aws-envs/
+                      Sets AWS_CONFIG_FILE and AWS_SHARED_CREDENTIALS_FILE
+                      for that environment. If ENV does not match an existing
+                      environment directory it is passed through to aws sso login.
 
 OPTIONS:
   --help              Show this help message
@@ -26,8 +32,14 @@ ENVIRONMENT:
   - VS Code environment: Uses browser-based authentication
   - Terminal/SSH: Uses device code authentication (--no-browser --use-device-code)
 
+AWS ENVIRONMENTS:
+  Place per-environment config/credentials under ~/.aws/aws-envs/<name>/.
+  Example: ~/.aws/aws-envs/hc/config and ~/.aws/aws-envs/hc/credentials
+
 EXAMPLES:
-  ssostart --profile myprofile          # Login to myprofile
+  ssostart                              # Login with default AWS config
+  ssostart hc                           # Login using ~/.aws/aws-envs/hc config
+  ssostart hc --profile myprofile       # Login to myprofile within hc environment
   ssostart --profile myprofile --debug  # Login with debug output
   ssostart --region us-east-1 --profile myprofile
 
@@ -38,6 +50,15 @@ EOF
 # Check for help flag
 if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
     show_help
+fi
+
+# Check if first argument is an aws-env name
+AWS_ENVS_DIR="$HOME/.aws/aws-envs"
+if [[ $# -gt 0 && "${1:-}" != -* && -d "$AWS_ENVS_DIR/$1" ]]; then
+    export AWS_CONFIG_FILE="$AWS_ENVS_DIR/$1/config"
+    export AWS_SHARED_CREDENTIALS_FILE="$AWS_ENVS_DIR/$1/credentials"
+    echo "Using AWS environment: $1"
+    shift
 fi
 
 # Load default options from ~/.ssostartrc if it exists
@@ -77,13 +98,13 @@ fi
 if [[ "$is_vscode" == "true" ]]; then
     # VS Code environment - always use browser (VS Code handles the callback)
     echo "Detected VS Code environment - using browser authentication"
-    exec aws sso login "${EXTRA_OPTS[@]}"
+    exec aws sso login "${EXTRA_OPTS[@]+"${EXTRA_OPTS[@]}"}"
 elif [[ "$is_ssh" == "false" ]]; then
     # Local terminal (not SSH) - use browser
     echo "Local terminal detected - using browser authentication"
-    exec aws sso login "${EXTRA_OPTS[@]}"
+    exec aws sso login "${EXTRA_OPTS[@]+"${EXTRA_OPTS[@]}"}"
 else
     # SSH session without VS Code - use device code
     echo "SSH session detected - using device code authentication"
-    exec aws sso login --no-browser --use-device-code "${EXTRA_OPTS[@]}"
+    exec aws sso login --no-browser --use-device-code "${EXTRA_OPTS[@]+"${EXTRA_OPTS[@]}"}"
 fi

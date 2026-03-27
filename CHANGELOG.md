@@ -1,3 +1,10 @@
+# [0.9.0](https://github.com/easytocloud/sso-tools/compare/v0.8.1...v0.9.0) (2026-03-27)
+
+
+### Features
+
+* added aws-envs support ([340a547](https://github.com/easytocloud/sso-tools/commit/340a54789095d3fb62a986ef3d4dcdd01bbc3eaf))
+
 ## [0.8.1](https://github.com/easytocloud/sso-tools/compare/v0.8.0...v0.8.1) (2026-01-23)
 
 
